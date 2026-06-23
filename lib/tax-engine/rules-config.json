@@ -1,0 +1,273 @@
+{
+  "$schema": "./rules-schema.json",
+  "metadata": {
+    "version": "0.1.0",
+    "vigencia_inicio": "2026-01-01",
+    "atualizado_em": "2026-05-15",
+    "responsavel_revisao": "tributarista parceiro (a contratar)",
+    "documento_base": "MGTs em outputs/MGT_*.md"
+  },
+
+  "comment": "FONTE ÚNICA DE VERDADE — Editar AQUI para mudar alíquotas, gatilhos, limites. Engine consome este arquivo via loader.ts. Não precisa mudar código quando regra fiscal muda.",
+
+  "renda_variavel_br": {
+    "swing_acao": {
+      "aliquota": 0.15,
+      "isencao_volume_mes": 20000.00,
+      "isencao_aplica_a": ["acao_br"],
+      "dedo_duro_aliquota": 0.00005,
+      "dedo_duro_threshold_minimo": 1.00,
+      "darf_codigo": "6015",
+      "vencimento": "ultimo_dia_util_mes_seguinte"
+    },
+    "day_trade": {
+      "aliquota": 0.20,
+      "isencao_aplica": false,
+      "dedo_duro_aliquota": 0.01,
+      "compensacao_separada_de_swing": true
+    },
+    "etf_rv_br": {
+      "aliquota_swing": 0.15,
+      "isencao_20k_aplica": false
+    }
+  },
+
+  "fii_fiagro": {
+    "ganho_capital_cota": {
+      "aliquota": 0.20,
+      "isencao_20k_aplica": false,
+      "darf_codigo": "6015"
+    },
+    "rendimento_mensal_pf_isencao": {
+      "requisitos": [
+        "fundo_listado_em_bolsa_ou_balcao",
+        "minimo_50_cotistas",
+        "cotista_pf_detem_menos_que_10pp_das_cotas",
+        "cotista_pf_recebe_menos_que_10pp_dos_rendimentos",
+        "cotista_pf_nao_e_pessoa_ligada_ao_construtor_incorporador_socio"
+      ]
+    },
+    "compensacao_isolada_por_categoria": ["fii", "fiagro_fii", "fiagro_fidc", "fiagro_fip"]
+  },
+
+  "renda_fixa_tributada": {
+    "tabela_regressiva": [
+      { "ate_dias": 180, "aliquota": 0.225 },
+      { "ate_dias": 360, "aliquota": 0.20 },
+      { "ate_dias": 720, "aliquota": 0.175 },
+      { "ate_dias": null, "aliquota": 0.15 }
+    ],
+    "iof_30d_aplica": true,
+    "compensacao_de_prejuizo": false,
+    "comment_compensacao": "Prejuízo em RF tributada NÃO compensa em nenhuma outra categoria — capital perdido fiscalmente"
+  },
+
+  "etf_rf_br": {
+    "tabela_por_pmr_indice": [
+      { "ate_pmr_dias": 180, "aliquota": 0.25 },
+      { "ate_pmr_dias": 720, "aliquota": 0.20 },
+      { "ate_pmr_dias": null, "aliquota": 0.15 }
+    ],
+    "comment_lei_14754": "Lei 14.754/2023 mudou para tabela por PMR do índice (não pelo prazo da aplicação)"
+  },
+
+  "rf_isenta_pf": {
+    "instrumentos": ["lci", "lca", "lig", "cri", "cra", "debenture_incentivada_lei_12431", "poupanca"],
+    "prazos_minimos_saque": {
+      "lci_emissoes_apos_2024": "9_meses",
+      "lca_emissoes_apos_2024": "9_meses",
+      "lig": "24_meses"
+    }
+  },
+
+  "fundos_abertos": {
+    "come_cotas": {
+      "datas": ["ultimo_dia_util_maio", "ultimo_dia_util_novembro"],
+      "aliquota_lp": 0.15,
+      "aliquota_cp": 0.20,
+      "fia_qualificado_isento": true,
+      "fia_qualificado_minimo_acoes_qualificadas": 0.67
+    },
+    "regressiva_resgate_lp": [
+      { "ate_dias": 180, "aliquota": 0.225 },
+      { "ate_dias": 360, "aliquota": 0.20 },
+      { "ate_dias": 720, "aliquota": 0.175 },
+      { "ate_dias": null, "aliquota": 0.15 }
+    ],
+    "regressiva_resgate_cp": [
+      { "ate_dias": 180, "aliquota": 0.225 },
+      { "ate_dias": null, "aliquota": 0.20 }
+    ],
+    "classificacao_cp_lp_por_pmr_dias": 365
+  },
+
+  "fundos_fechados_pos_14754": {
+    "come_cotas_aplica": true,
+    "excecoes_isencao_come_cotas": ["fip_qualificado_cvm_578", "fia_fechado", "fii_ie_fip_ie_lei_12431"],
+    "fip_qualificado": {
+      "aliquota_distribuicao": 0.15,
+      "come_cotas_aplica": false,
+      "comment": "FIP qualificado mantém regime especial: 15% só em amortização/distribuição/venda"
+    },
+    "antecipacao_8_porcento": {
+      "prazo": "ate_dez_2024",
+      "aliquota": 0.08,
+      "status": "janela_expirada",
+      "comment": "Para auditoria de quem optou ou não; histórico imutável"
+    }
+  },
+
+  "dividendos_jcp": {
+    "regime_pre_2026": {
+      "dividendos_pf": "isento"
+    },
+    "regime_pos_2026_lei_15270": {
+      "vigencia_inicio": "2026-01-01",
+      "gatilho_irrf_mensal": 50000.00,
+      "aliquota_irrf_acima_gatilho": 0.10,
+      "base_calculo": "todo_o_valor_distribuido_no_mes_pela_mesma_fonte",
+      "comment": "Se passar de R$ 50k/mês mesma fonte, retém 10% sobre TUDO do mês (não só excedente)"
+    },
+    "jcp": {
+      "aliquota_irrf": 0.15,
+      "definitivo_para_pf": true,
+      "entra_na_base_irpfm": true
+    },
+    "regra_transicao_lei_15270": {
+      "condicoes_cumulativas_para_manter_regime_antigo": [
+        "lucros_apurados_ate_2025_12_31",
+        "distribuicao_aprovada_em_ata_ate_2025_12_31",
+        "exigibilidade_nos_termos_legislacao_civil",
+        "pagamento_conforme_ato_aprovacao_original"
+      ],
+      "janela_status": "fechada"
+    }
+  },
+
+  "irpfm_lei_15270": {
+    "vigencia_inicio": "2026-01-01",
+    "base_calculo": "renda_anual_ampla",
+    "faixas": [
+      { "renda_ate": 600000, "aliquota": 0.00 },
+      { "renda_ate": 1200000, "aliquota_progressiva_linear_ate": 0.10 },
+      { "renda_ate": null, "aliquota": 0.10 }
+    ],
+    "rendimentos_que_entram_na_base": [
+      "salario", "pro_labore", "13_salario", "ferias", "plr",
+      "aluguel_recebido", "honorarios_autonomo",
+      "aposentadoria_acima_isencao_idoso",
+      "jcp_recebido",
+      "rendimentos_fundo_aberto", "rendimentos_fundo_fechado_pos_14754",
+      "dividendos_pj_brasileira_mesmo_isentos",
+      "rendimentos_mensais_fii_fiagro_isentos",
+      "rendimentos_lci_lca_cri_cra_debenture_incentivada",
+      "rendimentos_poupanca",
+      "ganho_capital_rv",
+      "ganho_capital_fii",
+      "rendimentos_rf_tributada",
+      "ganhos_e_rendimentos_exterior_lei_14754",
+      "resgate_pgbl_vgbl"
+    ],
+    "rendimentos_excluidos": [
+      "indenizacoes_dano_moral",
+      "fgts",
+      "seguro_de_vida_beneficiario",
+      "pensao_alimentar_pos_adi_5422",
+      "aposentadoria_idoso_dentro_isencao",
+      "heranca_recebida",
+      "doacao_recebida"
+    ],
+    "redutor_anti_bitributacao": {
+      "comment": "Garante que carga PJ + IRPFM não ultrapasse limites nominais",
+      "limites_nominais_por_pj": {
+        "pj_nao_financeira": 0.34,
+        "pj_seguradora_certas_financeiras": 0.40,
+        "banco_lei_complementar_105": 0.45
+      }
+    }
+  },
+
+  "exterior_lei_14754": {
+    "vigencia_inicio": "2024-01-01",
+    "aliquota_anual": 0.15,
+    "apuracao": "anual_em_DAA",
+    "abrangencia": [
+      "stocks_exterior", "etfs_exterior", "reits_exterior",
+      "bonds_exterior", "fundos_offshore", "mutual_funds_nao_etf",
+      "ucits_funds", "cripto_em_custodia_no_exterior"
+    ],
+    "compensacao_prejuizos_intra_exterior": true,
+    "compensacao_com_brasil": false,
+    "variacao_cambial_destacada": false,
+    "comment_cambio": "Ganho em BRL inclui variação cambial — não destaca como ganho separado",
+    "offshore_pic": {
+      "regime_padrao": "opaca",
+      "transparente_opcao_irrevogavel": true,
+      "prazo_opcao_estoque_pre_2024": "expirado_em_dez_2024",
+      "trust_regime_obrigatorio": "transparente"
+    },
+    "tratado_brasil_eua_pf": {
+      "cobre_dividendos_pf": false,
+      "retencao_eua_dividendo_pf": 0.30,
+      "ucits_irlanda_vantagem": {
+        "retencao_eua_via_tratado_irlanda_eua": 0.15,
+        "carga_total_aproximada_pf_brasileira": 0.28
+      }
+    }
+  },
+
+  "tabela_progressiva_irpf_2026": {
+    "vigencia_inicio": "2026-01-01",
+    "comment": "Fonte: tabela progressiva mensal 2026 (base de calculo = bruto - desconto_simplificado_mensal). Faixas incidem sobre a BASE, nao sobre o bruto. Redutor Lei 15.270 incide sobre o BRUTO.",
+    "desconto_simplificado_mensal": 607.20,
+    "faixas_base_mensais": [
+      { "base_ate": 2428.80, "aliquota": 0.00, "parcela_deduzir": 0.00 },
+      { "base_ate": 2826.65, "aliquota": 0.075, "parcela_deduzir": 182.16 },
+      { "base_ate": 3751.05, "aliquota": 0.15, "parcela_deduzir": 394.16 },
+      { "base_ate": 4664.68, "aliquota": 0.225, "parcela_deduzir": 675.49 },
+      { "base_ate": null, "aliquota": 0.275, "parcela_deduzir": 908.73 }
+    ],
+    "redutor_lei_15270": {
+      "comment": "Redutor calculado sobre o BRUTO (nao sobre a base). Confirmado pelos exemplos oficiais da RFB.",
+      "faixa_fixa_teto_bruto": 5000.00,
+      "redutor_fixo": 312.89,
+      "faixa_decrescente_teto_bruto": 7350.00,
+      "redutor_a": 978.62,
+      "redutor_b": 0.133145
+    }
+  },
+
+  "veiculos": {
+    "pj_lucro_real": {
+      "irpj_basica": 0.15,
+      "irpj_adicional_acima_20k_mes": 0.10,
+      "csll": 0.09,
+      "pis_cofins_nao_cumulativo": 0.0925,
+      "carga_efetiva_sobre_lucro_aproximada": 0.34
+    },
+    "pj_lucro_presumido": {
+      "presuncao_servicos_locacao_cessao_direitos": 0.32,
+      "presuncao_venda_mercadorias": 0.08,
+      "presuncao_imobiliaria_venda": 0.08,
+      "presuncao_imobiliaria_locacao": 0.32,
+      "irpj_sobre_presuncao": 0.15,
+      "irpj_adicional": 0.10,
+      "csll_sobre_presuncao": 0.09,
+      "pis_cofins_cumulativo": 0.0365,
+      "carga_efetiva_aluguel_aproximada": 0.1133
+    },
+    "simples_nacional": {
+      "vedado_para_holding": true,
+      "vedado_para_atividade_financeira": true
+    }
+  },
+
+  "itcmd_referencias_estados": {
+    "sp": { "aliquota_atual": 0.04, "progressiva_em_estudo": true },
+    "rj": { "progressiva": [0.04, 0.045, 0.05, 0.06, 0.07, 0.08] },
+    "mg": { "progressiva": [0.03, 0.04, 0.05] },
+    "rs": { "progressiva": [0.03, 0.04, 0.05, 0.06] },
+    "pr": { "aliquota_unica": 0.04 },
+    "sc": { "aliquota_unica": 0.08 }
+  }
+}
