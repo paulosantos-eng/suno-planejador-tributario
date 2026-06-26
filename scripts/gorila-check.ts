@@ -39,3 +39,10 @@ if (r.naoMapeados.length) {
       r.naoMapeados.map((a) => `${a.ativo} (${a.classe}/${a.subClasse})`).join(", "),
   );
 }
+
+const fator = r.periodoDias && r.periodoDias > 0 ? 365 / r.periodoDias : 1;
+const comDiv = r.ativos.filter((a) => a.dividendos > 0);
+console.log(`\nPeríodo: ${r.periodoDias ?? "?"} dias · ativos com dividendos: ${comDiv.length}`);
+for (const a of comDiv) {
+  console.log(`  ${a.ativo.slice(0, 22).padEnd(22)} período ${brl(a.dividendos)} → anual ~${brl(a.dividendos * fator)}`);
+}

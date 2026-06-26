@@ -1,4 +1,4 @@
-// Importador do relatório CSV do Gorila → alocação por classe Suno.
+// Importador do relatório CSV do Gorila → alocação por classe Suno + dividendos.
 // Lê a seção "Posição" (ativo a ativo) e mapeia cada um para as classes Suno.
 import { CLASSES_SUNO, type ClasseSuno } from "@/lib/suno-model";
 
@@ -10,6 +10,7 @@ export interface GorilaAsset {
   subClasse: string;
   classe: string;
   posicao: number;
+  dividendos: number; // dividendos no período do relatório (R$)
   classeSuno: ClasseSuno | null;
 }
 
@@ -19,9 +20,10 @@ export interface GorilaImport {
   total: number; // soma das posições (= Patrimônio Bruto)
   ativos: GorilaAsset[];
   naoMapeados: GorilaAsset[]; // classes não reconhecidas (sobem como alerta)
+  periodoDias: number | null; // duração do relatório (p/ anualizar dividendos)
 }
 
-// Mapeamento Gorila → Suno (confirmado: Multimercado→Alternativo, BDR→Ações).
+// Mapeamento Gorila → Suno (confirmado: Multimercado próprio, BDR→Ações).
 export function mapToSuno(classe: string, subClasse: string): ClasseSuno | null {
   const c = classe.trim();
   const s = subClasse.trim();
@@ -47,8 +49,28 @@ export function parseBRL(raw: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+// "13/01/2026" → Date (ou null se não casar o formato).
+function parseBrDate(raw: string): Date | null {
+  const m = raw.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+}
+
 export function parseGorilaCsv(text: string): GorilaImport {
   const linhas = text.split(/\r?\n/);
+
+  // Período do relatório (para anualizar dividendos).
+  let dataIni: Date | null = null;
+  let dataFim: Date | null = null;
+  for (const l of linhas) {
+    const c = l.split(";");
+    if (c[0]?.trim() === "Data Inicial") dataIni = parseBrDate(c[1] ?? "");
+    if (c[0]?.trim() === "Data Final") dataFim = parseBrDate(c[1] ?? "");
+  }
+  const periodoDias =
+    dataIni && dataFim
+      ? Math.max(1, Math.round((dataFim.getTime() - dataIni.getTime()) / 86400000))
+      : null;
 
   // Acha o cabeçalho da seção "Posição".
   let headerIdx = -1;
@@ -68,6 +90,7 @@ export function parseGorilaCsv(text: string): GorilaImport {
   const idxSub = header.indexOf("Sub-Classe");
   const idxClasse = header.indexOf("Classe");
   const idxPos = header.indexOf("Posição (R$)");
+  const idxDiv = header.indexOf("Dividendos");
   if (idxPos === -1 || idxClasse === -1) {
     throw new Error("Colunas 'Classe'/'Posição (R$)' não encontradas no CSV do Gorila.");
   }
@@ -80,11 +103,13 @@ export function parseGorilaCsv(text: string): GorilaImport {
     if (!ativo || !classe) continue; // pula linhas vazias / outras seções
     const subClasse = (cols[idxSub] ?? "").trim();
     const posicao = parseBRL(cols[idxPos] ?? "");
+    const dividendos = idxDiv >= 0 ? parseBRL(cols[idxDiv] ?? "") : 0;
     ativos.push({
       ativo,
       subClasse,
       classe,
       posicao,
+      dividendos,
       classeSuno: mapToSuno(classe, subClasse),
     });
   }
@@ -104,5 +129,5 @@ export function parseGorilaCsv(text: string): GorilaImport {
     CLASSES_SUNO.map((c) => [c, total > 0 ? (porClasseBrl[c] / total) * 100 : 0]),
   ) as Record<ClasseSuno, number>;
 
-  return { porClasse, porClasseBrl, total, ativos, naoMapeados };
+  return { porClasse, porClasseBrl, total, ativos, naoMapeados, periodoDias };
 }

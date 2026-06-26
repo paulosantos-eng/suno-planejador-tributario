@@ -36,7 +36,7 @@ export function StepCliente() {
             }))
           }
         />
-        <span className="field__hint">Soma de tudo que o cliente tem investido hoje.</span>
+        <span className="field__hint">Opcional — pode vir automático do import do Gorila.</span>
       </div>
     </div>
   );

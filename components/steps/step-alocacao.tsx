@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useWizard } from "@/lib/wizard/context";
-import { CLASSES_ALOCACAO, type ImportAsset } from "@/lib/wizard/types";
+import { CLASSES_ALOCACAO, type ImportAsset, type DividendSource } from "@/lib/wizard/types";
 import { parseGorilaCsv } from "@/lib/portfolio-import/gorila";
 import type { ClasseSuno } from "@/lib/suno-model";
 
@@ -48,16 +48,28 @@ export function StepAlocacao() {
           posicao: a.posicao,
           classeSuno: a.classeSuno,
         }));
+        // Dividendos do período → estimativa anual (frequência mensal, editável na Renda).
+        const fator = r.periodoDias && r.periodoDias > 0 ? 365 / r.periodoDias : 1;
+        const divs: DividendSource[] = r.ativos
+          .filter((a) => a.dividendos > 0)
+          .map((a) => ({
+            id: crypto.randomUUID(),
+            nome: a.ativo,
+            tipo: "dividendo" as const,
+            valorAnoPassado: Math.round(a.dividendos * fator),
+            frequencia: "mensal" as const,
+          }));
         setState((s) => ({
           ...s,
           importAssets: imported,
           alocacao: pctsFromAssets(imported),
+          dividendos: divs,
+          cliente: { ...s.cliente, patrimonio: Math.round(r.total) },
         }));
         setMsg(
           `Importado: ${r.ativos.length} ativos · patrimônio ${brl(r.total)}.` +
-            (r.naoMapeados.length
-              ? ` ⚠ ${r.naoMapeados.length} sem classe — escolha abaixo.`
-              : ""),
+            (divs.length ? ` ${divs.length} fonte(s) de dividendo pré-preenchidas (Renda).` : "") +
+            (r.naoMapeados.length ? ` ⚠ ${r.naoMapeados.length} sem classe — escolha abaixo.` : ""),
         );
       } catch {
         setMsg("Não consegui ler — confirme que é o CSV do Gorila.");

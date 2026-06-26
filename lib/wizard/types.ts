@@ -51,21 +51,18 @@ export const initialState: WizardState = {
 
 export function isStepValid(step: number, s: WizardState): boolean {
   switch (step) {
-    case 1:
-      return s.cliente.nome.trim().length > 0 && (s.cliente.patrimonio ?? 0) > 0;
-    case 2:
-      return s.perfil !== null;
-    case 3:
-      return (
-        s.dividendos.length > 0 &&
-        s.dividendos.every((d) => d.nome.trim().length > 0 && d.valorAnoPassado >= 0)
-      );
-    case 4: {
-      // A alocação (nas classes Suno) tem que somar 100% (folga mínima p/ floats).
+    case 1: // Cliente — patrimônio é opcional (pode vir do Gorila)
+      return s.cliente.nome.trim().length > 0;
+    case 2: {
+      // Carteira/alocação (nas classes Suno) tem que somar 100% (folga p/ floats).
       const soma = CLASSES_ALOCACAO.reduce((a, c) => a + (s.alocacao[c] || 0), 0);
       return Math.abs(soma - 100) < 0.5;
     }
-    case 5:
+    case 3: // Enquadramento
+      return s.perfil !== null;
+    case 4: // Renda — fontes opcionais, mas as lançadas precisam ter nome
+      return s.dividendos.every((d) => d.nome.trim().length > 0 && d.valorAnoPassado >= 0);
+    case 5: // Onde alocar
       return (s.comparar.valor ?? 0) > 0 && s.comparar.prazoMeses > 0 && s.comparar.cdiAA > 0;
     default:
       return false;

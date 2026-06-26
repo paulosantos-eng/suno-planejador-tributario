@@ -61,9 +61,9 @@ export default function FluxoStepPage() {
         </div>
 
         {n === 1 && <StepCliente />}
-        {n === 2 && <StepPerfil />}
-        {n === 3 && <StepDividendos />}
-        {n === 4 && <StepAlocacao />}
+        {n === 2 && <StepAlocacao />}
+        {n === 3 && <StepPerfil />}
+        {n === 4 && <StepDividendos />}
         {n === 5 && <StepComparar />}
 
         <div className="row row--between" style={{ marginTop: 8 }}>

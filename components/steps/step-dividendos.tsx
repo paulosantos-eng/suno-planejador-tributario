@@ -46,7 +46,8 @@ export function StepDividendos() {
           Entram no gatilho: <strong>dividendos de ações</strong> e{" "}
           <strong>distribuição de lucros da PJ</strong>. Use o valor recebido{" "}
           <strong>no ano passado</strong>, por fonte. O imposto incide quando uma fonte
-          passa de <strong>{brl(GATILHO_MENSAL)} por mês</strong>.
+          passa de <strong>{brl(GATILHO_MENSAL)} por mês</strong>. Se você importou do
+          Gorila, os valores são estimativa anualizada do período — confira a frequência.
         </span>
       </div>
 
