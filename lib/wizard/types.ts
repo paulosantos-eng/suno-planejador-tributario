@@ -1,4 +1,6 @@
-export type PerfilId = "conservador" | "moderado" | "dinamico";
+import { CLASSES_SUNO, type ClasseSuno, type PerfilId } from "@/lib/suno-model";
+
+export type { PerfilId, ClasseSuno };
 export type Frequencia = "mensal" | "trimestral" | "semestral" | "anual";
 
 export interface DividendSource {
@@ -8,14 +10,8 @@ export interface DividendSource {
   frequencia: Frequencia;
 }
 
-export const CLASSES_ALOCACAO = [
-  "Ações BR",
-  "FII / Fiagro",
-  "Renda Fixa Trib.",
-  "Renda Fixa Isenta",
-  "Exterior",
-] as const;
-export type ClasseAlocacao = (typeof CLASSES_ALOCACAO)[number];
+export const CLASSES_ALOCACAO = CLASSES_SUNO;
+export type ClasseAlocacao = ClasseSuno;
 
 export interface CompararState {
   valor: number | null;
@@ -53,8 +49,8 @@ export function isStepValid(step: number, s: WizardState): boolean {
         s.dividendos.every((d) => d.nome.trim().length > 0 && d.valorAnoPassado >= 0)
       );
     case 4: {
-      // A alocação tem que somar exatamente 100% (com folga mínima para floats).
-      const soma = Object.values(s.alocacao).reduce((a, b) => a + (b || 0), 0);
+      // A alocação (nas classes Suno) tem que somar 100% (folga mínima p/ floats).
+      const soma = CLASSES_ALOCACAO.reduce((a, c) => a + (s.alocacao[c] || 0), 0);
       return Math.abs(soma - 100) < 0.5;
     }
     case 5:

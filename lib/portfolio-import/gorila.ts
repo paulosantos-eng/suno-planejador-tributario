@@ -1,14 +1,9 @@
 // Importador do relatório CSV do Gorila → alocação por classe Suno.
-// Lê a seção "Posição" (ativo a ativo) e mapeia cada um para as 5 classes Suno.
+// Lê a seção "Posição" (ativo a ativo) e mapeia cada um para as classes Suno.
+import { CLASSES_SUNO, type ClasseSuno } from "@/lib/suno-model";
 
-export const CLASSES_SUNO = [
-  "Renda Fixa",
-  "Ações",
-  "FIIs",
-  "Internacional",
-  "Alternativo",
-] as const;
-export type ClasseSuno = (typeof CLASSES_SUNO)[number];
+export { CLASSES_SUNO };
+export type { ClasseSuno };
 
 export interface GorilaAsset {
   ativo: string;
@@ -32,7 +27,7 @@ export function mapToSuno(classe: string, subClasse: string): ClasseSuno | null 
   const s = subClasse.trim();
   if (c === "Renda Fixa" || c === "Caixa") return "Renda Fixa";
   if (c === "Investimento No Exterior") return "Internacional";
-  if (c === "Multimercado") return "Alternativo";
+  if (c === "Multimercado") return "Multimercado";
   if (c === "Renda Variável") {
     if (s === "FIIs") return "FIIs";
     return "Ações"; // Ações e BDRs
