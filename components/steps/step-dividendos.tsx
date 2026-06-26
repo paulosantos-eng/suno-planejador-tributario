@@ -2,7 +2,7 @@
 
 import { useWizard } from "@/lib/wizard/context";
 import type { DividendSource, Frequencia, TipoRenda } from "@/lib/wizard/types";
-import { GATILHO_MENSAL, runForecast } from "@/lib/forecast";
+import { GATILHO_MENSAL, runForecast, irpfProLaboreAnual } from "@/lib/forecast";
 import { brl } from "@/lib/format";
 
 const TIPOS: { id: TipoRenda; label: string }[] = [
@@ -146,6 +146,30 @@ export function StepDividendos() {
         <button type="button" className="btn btn--secondary" onClick={add}>
           + Adicionar fonte
         </button>
+      </div>
+
+      <div className="divider" />
+      <div className="field">
+        <label className="field__label">Pró-labore mensal (R$) — opcional</label>
+        <input
+          className="field__input"
+          type="number"
+          min={0}
+          value={state.proLabore ?? ""}
+          placeholder="0"
+          onChange={(e) =>
+            setState((s) => ({
+              ...s,
+              proLabore: e.target.value === "" ? null : Number(e.target.value),
+            }))
+          }
+        />
+        {state.proLabore != null && state.proLabore > 0 && (
+          <span className="field__hint">
+            IRPF estimado ~{brl(irpfProLaboreAnual(state.proLabore))}/ano (tabela
+            progressiva). Não entra no gatilho dos dividendos.
+          </span>
+        )}
       </div>
     </div>
   );

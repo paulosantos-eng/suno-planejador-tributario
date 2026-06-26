@@ -132,3 +132,10 @@ export function tempoAteGatilho(
 
   return { crescimentoAA, jaPaga, anosAteComecar, proxima, fontes };
 }
+
+// IRPF anual sobre pró-labore mensal (tabela progressiva 2026 + redutor Lei 15.270),
+// assumindo pró-labore constante nos 12 meses. Reusa o cálculo do engine.
+export function irpfProLaboreAnual(mensalBruto: number): number {
+  if (!mensalBruto || mensalBruto <= 0) return 0;
+  return Rules.irpfProLabore(mensalBruto) * 12;
+}

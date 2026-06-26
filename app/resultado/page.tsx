@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWizard } from "@/lib/wizard/context";
 import { firstIncompleteStep } from "@/lib/wizard/types";
-import { tempoAteGatilho, CDI_PADRAO, GATILHO_MENSAL } from "@/lib/forecast";
+import { tempoAteGatilho, CDI_PADRAO, GATILHO_MENSAL, irpfProLaboreAnual } from "@/lib/forecast";
 import { comparar } from "@/lib/asset-compare";
 import { computeGap, PERFIL_LABELS } from "@/lib/profile";
 import { brl, pct } from "@/lib/format";
@@ -133,6 +133,21 @@ export default function ResultadoPage() {
               ))}
             </div>
           </div>
+
+          {/* Pró-labore */}
+          {state.proLabore != null && state.proLabore > 0 && (
+            <div className="card">
+              <span className="eyebrow">Pró-labore</span>
+              <div className="row row--between" style={{ marginTop: 12 }}>
+                <span>IRPF anual (tabela progressiva)</span>
+                <span className="num">{brl(irpfProLaboreAnual(state.proLabore))}</span>
+              </div>
+              <p className="subtle" style={{ fontSize: 12, marginTop: 8 }}>
+                Tributação separada do gatilho de dividendos. Entra na base anual do IRPFM
+                (a tratar).
+              </p>
+            </div>
+          )}
 
           {/* Enquadramento / GAP */}
           {gap && state.perfil && (

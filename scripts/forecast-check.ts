@@ -1,5 +1,5 @@
 // Sanidade da projeção "tempo até o gatilho". Rodar: npx tsx scripts/forecast-check.ts
-import { tempoAteGatilho } from "@/lib/forecast";
+import { tempoAteGatilho, irpfProLaboreAnual } from "@/lib/forecast";
 import type { DividendSource, Frequencia } from "@/lib/wizard/types";
 
 function src(nome: string, anual: number, freq: Frequencia): DividendSource {
@@ -25,4 +25,10 @@ for (const c of casos) {
   console.log(
     `${c.label}\n   jaPaga=${tt.jaPaga}  anosAteComecar=${anos}  proxima=${tt.proxima?.source.nome ?? "-"}`,
   );
+}
+
+const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+console.log("\nPró-labore — IRPF/ano (tabela progressiva):");
+for (const m of [10000, 30000, 50000]) {
+  console.log(`  ${brl(m)}/mês → ${brl(irpfProLaboreAnual(m))}/ano`);
 }

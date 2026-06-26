@@ -28,6 +28,7 @@ export interface WizardState {
   cliente: { nome: string; patrimonio: number | null };
   perfil: PerfilId | null;
   dividendos: DividendSource[];
+  proLabore: number | null; // pró-labore mensal (R$); IRPF progressivo, fora do gatilho
   alocacao: Record<string, number>; // classe -> % da carteira (deve somar 100)
   comparar: CompararState;
 }
@@ -36,6 +37,7 @@ export const initialState: WizardState = {
   cliente: { nome: "", patrimonio: null },
   perfil: null,
   dividendos: [],
+  proLabore: null,
   alocacao: {},
   comparar: { valor: null, prazoMeses: 24, cdiAA: 0.1425, cdbPctCDI: 1.0, lcaPctCDI: 0.9 },
 };
