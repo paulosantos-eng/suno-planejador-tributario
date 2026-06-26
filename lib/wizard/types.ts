@@ -29,7 +29,7 @@ export interface WizardState {
   cliente: { nome: string; patrimonio: number | null };
   perfil: PerfilId | null;
   dividendos: DividendSource[];
-  alocacao: Record<string, number>; // classe -> R$
+  alocacao: Record<string, number>; // classe -> % da carteira (deve somar 100)
   comparar: CompararState;
 }
 
@@ -52,8 +52,11 @@ export function isStepValid(step: number, s: WizardState): boolean {
         s.dividendos.length > 0 &&
         s.dividendos.every((d) => d.nome.trim().length > 0 && d.valorAnoPassado >= 0)
       );
-    case 4:
-      return Object.values(s.alocacao).reduce((a, b) => a + (b || 0), 0) > 0;
+    case 4: {
+      // A alocação tem que somar exatamente 100% (com folga mínima para floats).
+      const soma = Object.values(s.alocacao).reduce((a, b) => a + (b || 0), 0);
+      return Math.abs(soma - 100) < 0.5;
+    }
     case 5:
       return (s.comparar.valor ?? 0) > 0 && s.comparar.prazoMeses > 0 && s.comparar.cdiAA > 0;
     default:
