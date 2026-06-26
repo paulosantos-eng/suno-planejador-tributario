@@ -1,9 +1,14 @@
 "use client";
 
 import { useWizard } from "@/lib/wizard/context";
-import type { DividendSource, Frequencia } from "@/lib/wizard/types";
+import type { DividendSource, Frequencia, TipoRenda } from "@/lib/wizard/types";
 import { GATILHO_MENSAL, runForecast } from "@/lib/forecast";
 import { brl } from "@/lib/format";
+
+const TIPOS: { id: TipoRenda; label: string }[] = [
+  { id: "dividendo", label: "Dividendo de ação" },
+  { id: "distribuicao_pj", label: "Distribuição de lucros (PJ)" },
+];
 
 const FREQS: { id: Frequencia; label: string }[] = [
   { id: "mensal", label: "Mensal" },
@@ -13,7 +18,13 @@ const FREQS: { id: Frequencia; label: string }[] = [
 ];
 
 function emptySource(): DividendSource {
-  return { id: crypto.randomUUID(), nome: "", valorAnoPassado: 0, frequencia: "anual" };
+  return {
+    id: crypto.randomUUID(),
+    nome: "",
+    tipo: "dividendo",
+    valorAnoPassado: 0,
+    frequencia: "anual",
+  };
 }
 
 export function StepDividendos() {
@@ -32,15 +43,16 @@ export function StepDividendos() {
     <div className="col" style={{ gap: 16 }}>
       <div className="banner banner--info">
         <span>
-          Use os dividendos que o cliente recebeu <strong>no ano passado</strong>, por
-          papel/fonte. É o melhor ponto de partida. O imposto incide quando uma fonte passa
-          de <strong>{brl(GATILHO_MENSAL)} por mês</strong>.
+          Entram no gatilho: <strong>dividendos de ações</strong> e{" "}
+          <strong>distribuição de lucros da PJ</strong>. Use o valor recebido{" "}
+          <strong>no ano passado</strong>, por fonte. O imposto incide quando uma fonte
+          passa de <strong>{brl(GATILHO_MENSAL)} por mês</strong>.
         </span>
       </div>
 
       {sources.length === 0 && (
         <p className="muted">
-          Nenhuma fonte ainda. Adicione as ações/fontes que pagam dividendos ao cliente.
+          Nenhuma fonte ainda. Adicione as ações ou a PJ que pagam ao cliente.
         </p>
       )}
 
@@ -53,18 +65,35 @@ export function StepDividendos() {
             className="card"
             style={{ borderColor: cruza ? "var(--coral-600)" : "var(--border)" }}
           >
+            <div className="field" style={{ marginBottom: 12 }}>
+              <label className="field__label">Tipo de renda</label>
+              <select
+                className="field__select"
+                value={d.tipo ?? "dividendo"}
+                onChange={(e) => patch(d.id, { tipo: e.target.value as TipoRenda })}
+              >
+                {TIPOS.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="row" style={{ gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div className="field grow" style={{ minWidth: 150 }}>
-                <label className="field__label">Ação / fonte</label>
+                <label className="field__label">Empresa / fonte</label>
                 <input
                   className="field__input"
                   value={d.nome}
-                  placeholder="Ex.: ITSA4"
+                  placeholder={
+                    d.tipo === "distribuicao_pj" ? "Ex.: Minha Empresa Ltda" : "Ex.: ITSA4"
+                  }
                   onChange={(e) => patch(d.id, { nome: e.target.value })}
                 />
               </div>
               <div className="field" style={{ minWidth: 150 }}>
-                <label className="field__label">Dividendo ano passado (R$)</label>
+                <label className="field__label">Recebido ano passado (R$)</label>
                 <input
                   className="field__input"
                   type="number"
@@ -94,6 +123,7 @@ export function StepDividendos() {
                 Remover
               </button>
             </div>
+
             {d.valorAnoPassado > 0 && f && (
               <p style={{ marginTop: 10, fontSize: 13 }} className={cruza ? "" : "muted"}>
                 {cruza ? (

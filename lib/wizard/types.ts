@@ -3,10 +3,13 @@ import { CLASSES_SUNO, type ClasseSuno, type PerfilId } from "@/lib/suno-model";
 export type { PerfilId, ClasseSuno };
 export type Frequencia = "mensal" | "trimestral" | "semestral" | "anual";
 
+export type TipoRenda = "dividendo" | "distribuicao_pj";
+
 export interface DividendSource {
   id: string;
   nome: string;
-  valorAnoPassado: number; // dividendos recebidos no ano anterior (R$/ano)
+  tipo: TipoRenda; // dividendo de ação ou distribuição de lucros da PJ (ambos no gatilho 50k)
+  valorAnoPassado: number; // valor recebido no ano anterior (R$/ano)
   frequencia: Frequencia;
 }
 

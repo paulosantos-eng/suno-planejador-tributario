@@ -3,7 +3,7 @@ import { tempoAteGatilho } from "@/lib/forecast";
 import type { DividendSource, Frequencia } from "@/lib/wizard/types";
 
 function src(nome: string, anual: number, freq: Frequencia): DividendSource {
-  return { id: nome, nome, valorAnoPassado: anual, frequencia: freq };
+  return { id: nome, nome, tipo: "dividendo", valorAnoPassado: anual, frequencia: freq };
 }
 
 const r = 0.1425; // CDI
