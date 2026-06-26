@@ -1,5 +1,5 @@
 // Importador do relatório CSV do Gorila → alocação por classe Suno + dividendos.
-// Lê a seção "Posição" (ativo a ativo) e mapeia cada um para as classes Suno.
+// Tolerante a codificação (acentos), variações de cabeçalho e delimitador.
 import { CLASSES_SUNO, type ClasseSuno } from "@/lib/suno-model";
 
 export { CLASSES_SUNO };
@@ -23,15 +23,24 @@ export interface GorilaImport {
   periodoDias: number | null; // duração do relatório (p/ anualizar dividendos)
 }
 
-// Mapeamento Gorila → Suno (confirmado: Multimercado próprio, BDR→Ações).
+// minúsculas, sem acento, sem espaços nas pontas — tolera variações de cabeçalho/classe.
+function norm(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+// Mapeamento Gorila → Suno (Multimercado próprio, BDR→Ações). Tolerante a acento/caixa.
 export function mapToSuno(classe: string, subClasse: string): ClasseSuno | null {
-  const c = classe.trim();
-  const s = subClasse.trim();
-  if (c === "Renda Fixa" || c === "Caixa") return "Renda Fixa";
-  if (c === "Investimento No Exterior") return "Internacional";
-  if (c === "Multimercado") return "Multimercado";
-  if (c === "Renda Variável") {
-    if (s === "FIIs") return "FIIs";
+  const c = norm(classe);
+  const s = norm(subClasse);
+  if (c === "renda fixa" || c === "caixa") return "Renda Fixa";
+  if (c === "investimento no exterior") return "Internacional";
+  if (c === "multimercado") return "Multimercado";
+  if (c === "renda variavel") {
+    if (s === "fiis") return "FIIs";
     return "Ações"; // Ações e BDRs
   }
   return null; // desconhecido — vira alerta, não some
@@ -41,7 +50,7 @@ export function mapToSuno(classe: string, subClasse: string): ClasseSuno | null 
 export function parseBRL(raw: string): number {
   if (!raw) return 0;
   const limpo = raw
-    .replace(/R\$/g, "")
+    .replace(/R\$/gi, "")
     .replace(/\s/g, "")
     .replace(/\./g, "")
     .replace(",", ".");
@@ -49,55 +58,77 @@ export function parseBRL(raw: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-// "13/01/2026" → Date (ou null se não casar o formato).
+// "13/01/2026" → Date (ou null).
 function parseBrDate(raw: string): Date | null {
   const m = raw.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!m) return null;
   return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
 }
 
+// Detecta o delimitador a partir da própria linha de cabeçalho (sem decimais).
+function detectDelim(line: string): string {
+  let best = ";";
+  let bestN = -1;
+  for (const d of [";", ",", "\t"]) {
+    const n = line.split(d).length - 1;
+    if (n > bestN) {
+      bestN = n;
+      best = d;
+    }
+  }
+  return best;
+}
+
 export function parseGorilaCsv(text: string): GorilaImport {
   const linhas = text.split(/\r?\n/);
 
-  // Período do relatório (para anualizar dividendos).
+  // 1. Acha o cabeçalho da seção "Posição" (tolerante a acento e delimitador).
+  let headerIdx = -1;
+  for (let i = 0; i < linhas.length; i++) {
+    const low = norm(linhas[i]);
+    if (low.includes("corretora") && low.includes("ativo") && low.includes("posicao")) {
+      headerIdx = i;
+      break;
+    }
+  }
+  if (headerIdx === -1) {
+    throw new Error(
+      "não achei a seção de posições (linha com Corretora/Ativo/Posição). É o relatório de carteira do Gorila em CSV?",
+    );
+  }
+
+  const delim = detectDelim(linhas[headerIdx]);
+
+  // 2. Período (para anualizar dividendos).
   let dataIni: Date | null = null;
   let dataFim: Date | null = null;
   for (const l of linhas) {
-    const c = l.split(";");
-    if (c[0]?.trim() === "Data Inicial") dataIni = parseBrDate(c[1] ?? "");
-    if (c[0]?.trim() === "Data Final") dataFim = parseBrDate(c[1] ?? "");
+    const c = l.split(delim);
+    const k = norm(c[0] ?? "");
+    if (k === "data inicial") dataIni = parseBrDate(c[1] ?? "");
+    if (k === "data final") dataFim = parseBrDate(c[1] ?? "");
   }
   const periodoDias =
     dataIni && dataFim
       ? Math.max(1, Math.round((dataFim.getTime() - dataIni.getTime()) / 86400000))
       : null;
 
-  // Acha o cabeçalho da seção "Posição".
-  let headerIdx = -1;
-  for (let i = 0; i < linhas.length; i++) {
-    const cols = linhas[i].split(";");
-    if (cols[0]?.trim() === "Corretora" && cols[1]?.trim() === "Ativo") {
-      headerIdx = i;
-      break;
-    }
-  }
-  if (headerIdx === -1) {
-    throw new Error("Não encontrei a seção 'Posição' no CSV do Gorila.");
-  }
-
-  const header = linhas[headerIdx].split(";").map((h) => h.trim());
-  const idxAtivo = header.indexOf("Ativo");
-  const idxSub = header.indexOf("Sub-Classe");
-  const idxClasse = header.indexOf("Classe");
-  const idxPos = header.indexOf("Posição (R$)");
-  const idxDiv = header.indexOf("Dividendos");
-  if (idxPos === -1 || idxClasse === -1) {
-    throw new Error("Colunas 'Classe'/'Posição (R$)' não encontradas no CSV do Gorila.");
+  // 3. Colunas (por nome normalizado).
+  const header = linhas[headerIdx].split(delim).map(norm);
+  const idxAtivo = header.indexOf("ativo");
+  const idxClasse = header.indexOf("classe");
+  const idxSub = header.findIndex((h) => h.includes("sub") && h.includes("classe"));
+  const idxPos = header.findIndex((h) => h.includes("posicao") && h.includes("r$"));
+  const idxDiv = header.findIndex((h) => h.includes("dividend"));
+  if (idxAtivo === -1 || idxClasse === -1 || idxPos === -1) {
+    throw new Error(
+      "não encontrei as colunas Ativo/Classe/Posição (R$) — o layout do relatório pode ser diferente.",
+    );
   }
 
   const ativos: GorilaAsset[] = [];
   for (let i = headerIdx + 1; i < linhas.length; i++) {
-    const cols = linhas[i].split(";");
+    const cols = linhas[i].split(delim);
     const ativo = (cols[idxAtivo] ?? "").trim();
     const classe = (cols[idxClasse] ?? "").trim();
     if (!ativo || !classe) continue; // pula linhas vazias / outras seções

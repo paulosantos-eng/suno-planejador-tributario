@@ -42,7 +42,13 @@ export function StepAlocacao() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const r = parseGorilaCsv(String(reader.result ?? ""));
+        const buf = reader.result as ArrayBuffer;
+        let texto = new TextDecoder("utf-8").decode(buf);
+        if (texto.includes(String.fromCharCode(0xfffd))) {
+          // arquivo provavelmente em ANSI/Windows-1252 (comum em exports BR)
+          texto = new TextDecoder("windows-1252").decode(buf);
+        }
+        const r = parseGorilaCsv(texto);
         const imported: ImportAsset[] = r.ativos.map((a) => ({
           ativo: a.ativo,
           posicao: a.posicao,
@@ -71,11 +77,15 @@ export function StepAlocacao() {
             (divs.length ? ` ${divs.length} fonte(s) de dividendo pré-preenchidas (Renda).` : "") +
             (r.naoMapeados.length ? ` ⚠ ${r.naoMapeados.length} sem classe — escolha abaixo.` : ""),
         );
-      } catch {
-        setMsg("Não consegui ler — confirme que é o CSV do Gorila.");
+      } catch (err) {
+        setMsg(
+          err instanceof Error
+            ? `Não consegui ler: ${err.message}`
+            : "Não consegui ler o arquivo.",
+        );
       }
     };
-    reader.readAsText(file, "utf-8");
+    reader.readAsArrayBuffer(file);
   };
 
   const reassign = (idx: number, classe: ClasseSuno | null) => {
