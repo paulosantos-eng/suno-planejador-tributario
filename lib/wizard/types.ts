@@ -24,6 +24,12 @@ export interface CompararState {
   lcaPctCDI: number; // ex.: 0.90 = 90% do CDI
 }
 
+export interface ImportAsset {
+  ativo: string;
+  posicao: number; // R$
+  classeSuno: ClasseSuno | null;
+}
+
 export interface WizardState {
   cliente: { nome: string; patrimonio: number | null };
   perfil: PerfilId | null;
@@ -31,6 +37,7 @@ export interface WizardState {
   proLabore: number | null; // pró-labore mensal (R$); IRPF progressivo, fora do gatilho
   alocacao: Record<string, number>; // classe -> % da carteira (deve somar 100)
   comparar: CompararState;
+  importAssets?: ImportAsset[]; // ativos importados do Gorila (revisar/reclassificar)
 }
 
 export const initialState: WizardState = {
