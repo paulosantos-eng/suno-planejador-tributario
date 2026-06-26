@@ -73,8 +73,62 @@ export function runForecast(sources: DividendSource[], multiplicador = 1): Forec
   return { multiplicador, totalDividendos, totalIrrf, algumCruza, fontes, porMes };
 }
 
-export const CENARIOS = [
-  { id: "abaixo", label: "−20%", mult: 0.8 },
-  { id: "base", label: "Base", mult: 1.0 },
-  { id: "acima", label: "+20%", mult: 1.2 },
-] as const;
+// CDI ≈ Selic. Selic 14,25% a.a. (Copom 17/06/2026). Premissa de mercado —
+// editável na tela e A VALIDAR com a área fiscal (muda ao longo do tempo).
+export const CDI_PADRAO = 0.1425;
+
+export interface SourceTime {
+  source: DividendSource;
+  porPagamento: number;
+  jaPaga: boolean;
+  anosParaCruzar: number | null; // null = não cruza (sem dividendo ou crescimento <= 0)
+}
+
+export interface TimeToThreshold {
+  crescimentoAA: number;
+  jaPaga: boolean;
+  anosAteComecar: number | null; // 0 se já paga; N se vai cruzar; null se não cruza
+  proxima: SourceTime | null; // a fonte que dispara primeiro (ou a que já paga)
+  fontes: SourceTime[];
+}
+
+// Em quanto tempo o cliente começa a pagar o imposto sobre dividendos.
+// O gatilho é POR FONTE (R$ 50k/mês por empresa). Cada fonte cresce à taxa
+// `crescimentoAA` e cruza o gatilho de forma independente. A "primeira a
+// cruzar" comanda o headline.
+export function tempoAteGatilho(
+  sources: DividendSource[],
+  crescimentoAA: number,
+): TimeToThreshold {
+  const base = runForecast(sources, 1);
+
+  const fontes: SourceTime[] = base.fontes.map((f) => {
+    const pp = f.porPagamento;
+    const jaPaga = pp > GATILHO_MENSAL;
+    let anos: number | null;
+    if (pp <= 0) anos = null;
+    else if (jaPaga) anos = 0;
+    else if (crescimentoAA <= 0) anos = null;
+    else anos = Math.log(GATILHO_MENSAL / pp) / Math.log(1 + crescimentoAA);
+    return { source: f.source, porPagamento: pp, jaPaga, anosParaCruzar: anos };
+  });
+
+  const jaPaga = fontes.some((f) => f.jaPaga);
+  let proxima: SourceTime | null = null;
+  let anosAteComecar: number | null = null;
+
+  if (jaPaga) {
+    proxima = fontes.find((f) => f.jaPaga) ?? null;
+    anosAteComecar = 0;
+  } else {
+    const vaoCruzar = fontes.filter((f) => f.anosParaCruzar != null);
+    if (vaoCruzar.length > 0) {
+      proxima = vaoCruzar.reduce((a, b) =>
+        (a.anosParaCruzar as number) <= (b.anosParaCruzar as number) ? a : b,
+      );
+      anosAteComecar = proxima.anosParaCruzar;
+    }
+  }
+
+  return { crescimentoAA, jaPaga, anosAteComecar, proxima, fontes };
+}

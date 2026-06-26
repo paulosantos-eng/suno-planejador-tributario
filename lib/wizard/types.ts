@@ -38,7 +38,7 @@ export const initialState: WizardState = {
   perfil: null,
   dividendos: [],
   alocacao: {},
-  comparar: { valor: null, prazoMeses: 24, cdiAA: 0.105, cdbPctCDI: 1.0, lcaPctCDI: 0.9 },
+  comparar: { valor: null, prazoMeses: 24, cdiAA: 0.1425, cdbPctCDI: 1.0, lcaPctCDI: 0.9 },
 };
 
 export function isStepValid(step: number, s: WizardState): boolean {

@@ -5,16 +5,24 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWizard } from "@/lib/wizard/context";
 import { firstIncompleteStep } from "@/lib/wizard/types";
-import { runForecast, CENARIOS, GATILHO_MENSAL } from "@/lib/forecast";
+import { tempoAteGatilho, CDI_PADRAO, GATILHO_MENSAL } from "@/lib/forecast";
 import { comparar } from "@/lib/asset-compare";
 import { computeGap, PERFIL_LABELS } from "@/lib/profile";
 import { brl, pct } from "@/lib/format";
 import { SunoLockup } from "@/components/suno-lockup";
 
+function fmtAnos(anos: number): string {
+  if (anos <= 0) return "imediatamente";
+  if (anos < 1) return "menos de 1 ano";
+  if (anos > 40) return "mais de 40 anos";
+  const v = anos.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  return `${v} ${anos < 2 ? "ano" : "anos"}`;
+}
+
 export default function ResultadoPage() {
   const { state, hydrated } = useWizard();
   const router = useRouter();
-  const [cenIdx, setCenIdx] = useState(1); // "Base"
+  const [crescimento, setCrescimento] = useState(CDI_PADRAO);
 
   // Se o funil não está completo, volta para a etapa pendente.
   useEffect(() => {
@@ -25,8 +33,7 @@ export default function ResultadoPage() {
 
   if (!hydrated || firstIncompleteStep(state) <= 5) return null;
 
-  const cen = CENARIOS[cenIdx];
-  const fc = runForecast(state.dividendos, cen.mult);
+  const tt = tempoAteGatilho(state.dividendos, crescimento);
   const gap = state.perfil ? computeGap(state.perfil, state.alocacao) : null;
   const cmp =
     state.comparar.valor && state.comparar.valor > 0
@@ -39,7 +46,23 @@ export default function ResultadoPage() {
         })
       : null;
 
-  const algumCruza = fc.algumCruza;
+  // Headline da projeção
+  let heroBig: string;
+  let heroSub: string;
+  let heroColor: string;
+  if (tt.jaPaga) {
+    heroBig = "Já paga hoje";
+    heroSub = `A fonte ${tt.proxima?.source.nome || "—"} já passa de ${brl(GATILHO_MENSAL)}/mês — incide 10%.`;
+    heroColor = "var(--coral-600)";
+  } else if (tt.anosAteComecar != null && tt.anosAteComecar <= 40) {
+    heroBig = `em ${fmtAnos(tt.anosAteComecar)}`;
+    heroSub = `Se os dividendos renderem ${pct(crescimento)} a.a., a fonte ${tt.proxima?.source.nome || ""} cruza os ${brl(GATILHO_MENSAL)}/mês.`;
+    heroColor = "var(--ink-900)";
+  } else {
+    heroBig = "Não tão cedo";
+    heroSub = `Com crescimento de ${pct(crescimento)} a.a., nenhuma fonte passa de ${brl(GATILHO_MENSAL)}/mês nos próximos 40 anos.`;
+    heroColor = "var(--ink-900)";
+  }
 
   return (
     <div className="app">
@@ -58,56 +81,53 @@ export default function ResultadoPage() {
 
       <main className="page">
         <div className="col" style={{ gap: 20 }}>
-          {/* Seletor de cenário */}
-          <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-            <span className="eyebrow" style={{ alignSelf: "center" }}>
-              Cenário de dividendos
-            </span>
-            {CENARIOS.map((s, i) => (
-              <button
-                key={s.id}
-                className={"chip " + (i === cenIdx ? "chip--ink" : "")}
-                style={{ cursor: "pointer" }}
-                onClick={() => setCenIdx(i)}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Número principal */}
+          {/* Projeção: quando começa a pagar */}
           <div className="card" style={{ textAlign: "center", padding: 32 }}>
-            <span className="eyebrow">Imposto previsto sobre dividendos · 2026</span>
-            <div
-              className="num num-2xl"
-              style={{ color: algumCruza ? "var(--coral-600)" : "var(--ink-900)", marginTop: 10 }}
-            >
-              {brl(fc.totalIrrf)}
+            <span className="eyebrow">Começa a pagar imposto sobre dividendos</span>
+            <div className="num num-2xl" style={{ color: heroColor, marginTop: 10 }}>
+              {heroBig}
             </div>
-            <p className="muted" style={{ marginTop: 10, maxWidth: 520, marginInline: "auto" }}>
-              {algumCruza
-                ? `Pelo menos uma fonte passa de ${brl(GATILHO_MENSAL)}/mês — incide 10% de imposto.`
-                : `Nenhuma fonte passa de ${brl(GATILHO_MENSAL)}/mês. Sem imposto sobre dividendos neste cenário.`}
+            <p className="muted" style={{ marginTop: 10, maxWidth: 540, marginInline: "auto" }}>
+              {heroSub}
             </p>
-            <p className="subtle" style={{ marginTop: 8, fontSize: 12 }}>
-              Estimativa de planejamento — validar com a área fiscal antes de uso com o cliente.
-            </p>
+
+            <div
+              className="field"
+              style={{ maxWidth: 280, margin: "20px auto 0", textAlign: "left" }}
+            >
+              <label className="field__label">Crescimento dos dividendos (% a.a.)</label>
+              <input
+                className="field__input"
+                type="number"
+                step="0.25"
+                value={(crescimento * 100).toFixed(2)}
+                onChange={(e) => setCrescimento((Number(e.target.value) || 0) / 100)}
+              />
+              <span className="field__hint">
+                Padrão: CDI ≈ Selic 14,25% a.a. (jun/2026) — premissa, ajuste. A validar com a
+                área fiscal.
+              </span>
+            </div>
           </div>
 
           {/* Por fonte */}
           <div className="card">
             <span className="eyebrow">Por fonte</span>
             <div className="col" style={{ gap: 8, marginTop: 12 }}>
-              {fc.fontes.map((f) => (
+              {tt.fontes.map((f) => (
                 <div key={f.source.id} className="row row--between">
                   <span>
                     {f.source.nome || "—"}{" "}
-                    <span className="subtle">· {brl(f.porPagamento)}/pagamento</span>
+                    <span className="subtle">· {brl(f.porPagamento)} por pagamento</span>
                   </span>
-                  {f.cruzaGatilho ? (
-                    <span className="chip chip--coral">paga {brl(f.irrf)}</span>
+                  {f.jaPaga ? (
+                    <span className="chip chip--coral">já paga</span>
+                  ) : f.anosParaCruzar == null ? (
+                    <span className="chip">sem gatilho</span>
+                  ) : f.anosParaCruzar > 40 ? (
+                    <span className="chip">+40 anos</span>
                   ) : (
-                    <span className="chip">faltam {brl(f.distancia)}</span>
+                    <span className="chip">cruza em {fmtAnos(f.anosParaCruzar)}</span>
                   )}
                 </div>
               ))}
@@ -167,10 +187,16 @@ export default function ResultadoPage() {
               Como se preparar
             </span>
             <ul style={{ margin: "12px 0 0", paddingLeft: 18, lineHeight: 1.7 }}>
-              {algumCruza && (
+              {tt.jaPaga && (
                 <li>
-                  Há fonte acima de {brl(GATILHO_MENSAL)}/mês: avalie escalonar os pagamentos para
-                  reduzir a incidência mensal.
+                  Já há fonte acima de {brl(GATILHO_MENSAL)}/mês: avalie escalonar os pagamentos
+                  para reduzir a incidência mensal.
+                </li>
+              )}
+              {!tt.jaPaga && tt.anosAteComecar != null && tt.anosAteComecar <= 40 && (
+                <li>
+                  Você tem ~{fmtAnos(tt.anosAteComecar)} antes de começar a pagar — dá tempo de
+                  planejar a distribuição.
                 </li>
               )}
               {cmp && cmp.vencedor === "lca" && (
@@ -185,6 +211,10 @@ export default function ResultadoPage() {
               <li>Revise a projeção quando confirmar os dividendos reais do ano.</li>
             </ul>
           </div>
+
+          <p className="subtle" style={{ fontSize: 12, textAlign: "center" }}>
+            Estimativa de planejamento — validar com a área fiscal antes de uso com o cliente.
+          </p>
         </div>
       </main>
     </div>
