@@ -54,10 +54,13 @@ export function StepAlocacao() {
           posicao: a.posicao,
           classeSuno: a.classeSuno,
         }));
-        // Dividendos do período → estimativa anual (frequência mensal, editável na Renda).
+        // Ações BR da carteira viram fontes de dividendo (gatilho 50k). O valor é o
+        // dividendo do período anualizado (muitas vezes 0/parcial) — ponto de partida
+        // editável; o consultor ajusta para o esperado no ano. ETFs/ações no exterior
+        // ficam de fora (regime Lei 14.754, não entram no gatilho).
         const fator = r.periodoDias && r.periodoDias > 0 ? 365 / r.periodoDias : 1;
         const divs: DividendSource[] = r.ativos
-          .filter((a) => a.dividendos > 0)
+          .filter((a) => a.classeSuno === "Ações")
           .map((a) => ({
             id: crypto.randomUUID(),
             nome: a.ativo,
@@ -74,7 +77,7 @@ export function StepAlocacao() {
         }));
         setMsg(
           `Importado: ${r.ativos.length} ativos · patrimônio ${brl(r.total)}.` +
-            (divs.length ? ` ${divs.length} fonte(s) de dividendo pré-preenchidas (Renda).` : "") +
+            (divs.length ? ` ${divs.length} ação(ões) listada(s) como fonte de dividendo (ajuste os valores na Renda).` : "") +
             (r.naoMapeados.length ? ` ⚠ ${r.naoMapeados.length} sem classe — escolha abaixo.` : ""),
         );
       } catch (err) {

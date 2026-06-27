@@ -41,8 +41,9 @@ if (r.naoMapeados.length) {
 }
 
 const fator = r.periodoDias && r.periodoDias > 0 ? 365 / r.periodoDias : 1;
-const comDiv = r.ativos.filter((a) => a.dividendos > 0);
-console.log(`\nPeríodo: ${r.periodoDias ?? "?"} dias · ativos com dividendos: ${comDiv.length}`);
-for (const a of comDiv) {
-  console.log(`  ${a.ativo.slice(0, 22).padEnd(22)} período ${brl(a.dividendos)} → anual ~${brl(a.dividendos * fator)}`);
+console.log(`\nPeríodo: ${r.periodoDias ?? "?"} dias`);
+const acoes = r.ativos.filter((a) => a.classeSuno === "Ações");
+console.log(`Ações BR (futuras fontes de dividendo): ${acoes.length}`);
+for (const a of acoes) {
+  console.log(`  ${a.ativo.slice(0, 22).padEnd(22)} div período ${brl(a.dividendos)} → anual ~${brl(a.dividendos * fator)}`);
 }
