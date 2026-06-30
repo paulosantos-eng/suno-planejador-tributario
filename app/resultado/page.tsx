@@ -27,6 +27,7 @@ import { SunoLockup } from "@/components/suno-lockup";
 import { GapBars } from "@/components/gap-bars";
 import { MemoriaCalculo } from "@/components/memoria-calculo";
 import { impostoTotalHoje } from "@/lib/memoria-calculo";
+import { beneficioFiscal } from "@/lib/benefit";
 
 function fmtAnos(anos: number): string {
   if (anos <= 0) return "imediatamente";
@@ -85,6 +86,7 @@ export default function ResultadoPage() {
     irpfAluguelAnual(state.aluguel ?? 0);
   const irpfm = irpfmEstimado(irpfmBase, irpfmCreditos);
   const imposto = impostoTotalHoje(state);
+  const benefit = beneficioFiscal(state);
 
   // Headline da projeção
   let heroBig: string;
@@ -132,6 +134,37 @@ export default function ResultadoPage() {
               memória de cálculo abaixo.
             </p>
           </div>
+
+          {/* Benefício fiscal (asset location) */}
+          {benefit.total > 0 && (
+            <div className="card card--coral" style={{ textAlign: "center", padding: 28 }}>
+              <span className="eyebrow" style={{ color: "rgba(255,255,255,.85)" }}>
+                Benefício fiscal potencial (estimativa anual)
+              </span>
+              <div className="num num-xl" style={{ color: "var(--white)", marginTop: 8 }}>
+                {brl(benefit.total)}
+              </div>
+              <p style={{ color: "rgba(255,255,255,.92)", marginTop: 8, fontSize: 13.5 }}>
+                De ~{brl(imposto.total)} para ~{brl(Math.max(0, imposto.total - benefit.escalonamento))} nas
+                rendas{benefit.carteira > 0 ? ` + ${brl(benefit.carteira)} de IR na carteira` : ""}.
+              </p>
+              <div
+                className="col"
+                style={{ gap: 4, marginTop: 12, textAlign: "left" }}
+              >
+                {benefit.movimentos.map((m, i) => (
+                  <div key={i} className="row row--between" style={{ fontSize: 13 }}>
+                    <span>{m.titulo}</span>
+                    <span className="tnum">{brl(m.economia)}</span>
+                  </div>
+                ))}
+              </div>
+              <p style={{ color: "rgba(255,255,255,.72)", fontSize: 11, marginTop: 10 }}>
+                Estimativa, respeitando o perfil. A migração de RF isenta não está no "imposto
+                hoje" (que foca nas rendas). Validar com a área fiscal.
+              </p>
+            </div>
+          )}
 
           {/* Projeção: quando começa a pagar */}
           <div className="card" style={{ textAlign: "center", padding: 32 }}>
