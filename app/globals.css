@@ -206,6 +206,56 @@ h1, h2, h3, h4, h5, h6 {
 .strong { font-weight: 600; }
 .divider { height: 1px; background: var(--border); margin: 20px 0; border: none; }
 
+/* ===== View selector (resultado) ===== */
+.view-selector { display: flex; align-items: center; gap: 8px; }
+.view-tabs { display: flex; background: var(--ink-100); border-radius: var(--r-lg); padding: 4px; gap: 4px; }
+.view-tab {
+  flex: 1; padding: 9px 20px; border: none; border-radius: var(--r-md);
+  font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+  cursor: pointer; background: transparent; color: var(--text-muted);
+  transition: all .15s; white-space: nowrap;
+}
+.view-tab:hover { color: var(--text); background: rgba(0,0,0,.05); }
+.view-tab--active { background: var(--white); color: var(--text); box-shadow: var(--shadow-sm); font-weight: 600; }
+
+/* ===== Print ===== */
+.no-print { /* visible on screen */ }
+.print-only { display: none; }
+
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block; }
+
+  body { background: white; font-size: 12px; }
+  .app { min-height: auto; }
+  .page { padding: 20px 32px; max-width: 100%; }
+  .col { gap: 12px !important; }
+
+  .card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 10px;
+  }
+  .card--coral {
+    background: #D42126 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color: white;
+  }
+  .card--dark {
+    background: #111 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color: white;
+  }
+
+  .num-2xl { font-size: 40px; }
+  .num-xl  { font-size: 28px; }
+  .num-lg  { font-size: 20px; }
+}
+
 /* ===== Suno lockup ===== */
 .suno-lockup { display: inline-flex; align-items: center; gap: 10px; font-family: 'Kanit', var(--font-display); color: var(--coral-700); line-height: 1; user-select: none; }
 .suno-lockup__bracket { font-family: 'Kanit', serif; font-weight: 300; font-size: 2.2em; line-height: 0.85; color: var(--coral-700); font-style: italic; transform: scaleY(1.6) scaleX(0.55); display: inline-block; }
