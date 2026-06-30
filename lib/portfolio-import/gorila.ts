@@ -53,6 +53,11 @@ export function ehAcaoBr(a: { classe: string; subClasse: string }): boolean {
   return norm(a.classe) === "renda variavel" && norm(a.subClasse) === "acoes";
 }
 
+// Dividendo vindo do exterior (ETF/ação internacional ou BDR) — Lei 14.754 (15% anual).
+export function ehDividendoExterior(a: { classe: string; subClasse: string }): boolean {
+  return norm(a.classe) === "investimento no exterior" || norm(a.subClasse) === "bdrs";
+}
+
 // "R$145.114,28" / "-R$479,06" / "R$0,00" → number
 export function parseBRL(raw: string): number {
   if (!raw) return 0;

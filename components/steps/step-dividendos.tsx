@@ -2,13 +2,21 @@
 
 import { useWizard } from "@/lib/wizard/context";
 import type { DividendSource, Frequencia, TipoRenda } from "@/lib/wizard/types";
-import { GATILHO_MENSAL, runForecast, irpfProLaboreAnual, ALIQ_JCP } from "@/lib/forecast";
+import {
+  GATILHO_MENSAL,
+  runForecast,
+  irpfProLaboreAnual,
+  ALIQ_JCP,
+  ALIQ_EXTERIOR,
+  irpfAluguelAnual,
+} from "@/lib/forecast";
 import { brl } from "@/lib/format";
 
 const TIPOS: { id: TipoRenda; label: string }[] = [
-  { id: "dividendo", label: "Dividendo de ação" },
+  { id: "dividendo", label: "Dividendo de ação (BR)" },
   { id: "distribuicao_pj", label: "Distribuição de lucros (PJ)" },
   { id: "jcp", label: "JCP (juros s/ capital próprio)" },
+  { id: "dividendo_exterior", label: "Dividendo exterior (15%)" },
 ];
 
 const FREQS: { id: Frequencia; label: string }[] = [
@@ -107,7 +115,7 @@ export function StepDividendos() {
                   }
                 />
               </div>
-              {d.tipo !== "jcp" && (
+              {(d.tipo === "dividendo" || d.tipo === "distribuicao_pj") && (
                 <div className="field" style={{ minWidth: 130 }}>
                   <label className="field__label">Frequência</label>
                   <select
@@ -133,7 +141,14 @@ export function StepDividendos() {
                 JCP · 15% de IRRF na fonte → ~{brl(d.valorAnoPassado * ALIQ_JCP)}/ano
               </p>
             )}
-            {d.valorAnoPassado > 0 && d.tipo !== "jcp" && f && (
+            {d.valorAnoPassado > 0 && d.tipo === "dividendo_exterior" && (
+              <p style={{ marginTop: 10, fontSize: 13 }} className="muted">
+                Exterior · 15% (Lei 14.754) → ~{brl(d.valorAnoPassado * ALIQ_EXTERIOR)}/ano
+              </p>
+            )}
+            {d.valorAnoPassado > 0 &&
+              (d.tipo === "dividendo" || d.tipo === "distribuicao_pj") &&
+              f && (
               <p style={{ marginTop: 10, fontSize: 13 }} className={cruza ? "" : "muted"}>
                 {cruza ? (
                   <span className="chip chip--coral">
@@ -177,6 +192,29 @@ export function StepDividendos() {
           <span className="field__hint">
             IRPF estimado ~{brl(irpfProLaboreAnual(state.proLabore))}/ano (tabela
             progressiva). Não entra no gatilho dos dividendos.
+          </span>
+        )}
+      </div>
+
+      <div className="field">
+        <label className="field__label">Aluguéis mensais (R$) — opcional</label>
+        <input
+          className="field__input"
+          type="number"
+          min={0}
+          value={state.aluguel ?? ""}
+          placeholder="0"
+          onChange={(e) =>
+            setState((s) => ({
+              ...s,
+              aluguel: e.target.value === "" ? null : Number(e.target.value),
+            }))
+          }
+        />
+        {state.aluguel != null && state.aluguel > 0 && (
+          <span className="field__hint">
+            IRPF (carnê-leão) estimado ~{brl(irpfAluguelAnual(state.aluguel))}/ano (tabela
+            progressiva).
           </span>
         )}
       </div>

@@ -41,6 +41,6 @@ console.log(`  JCP no gatilho? fontes=${ttJcp.fontes.length} jaPaga=${ttJcp.jaPa
 
 console.log("\nIRPFM — estimativa por faixa de base (sem créditos):");
 for (const base of [400_000, 700_000, 1_500_000]) {
-  const ir = irpfmEstimado(base, 0, 0, 0);
+  const ir = irpfmEstimado(base, 0);
   console.log(`  base ${brl(base)} → alíquota ${(ir.rate * 100).toFixed(2)}% · devido ${brl(ir.devido)}`);
 }

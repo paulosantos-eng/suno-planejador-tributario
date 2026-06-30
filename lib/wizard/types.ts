@@ -4,7 +4,7 @@ import { type CompareProduct, PRODUTOS_PADRAO } from "@/lib/asset-compare";
 export type { PerfilId, ClasseSuno };
 export type Frequencia = "mensal" | "trimestral" | "semestral" | "anual";
 
-export type TipoRenda = "dividendo" | "distribuicao_pj" | "jcp";
+export type TipoRenda = "dividendo" | "distribuicao_pj" | "jcp" | "dividendo_exterior";
 
 export interface DividendSource {
   id: string;
@@ -36,6 +36,7 @@ export interface WizardState {
   perfil: PerfilId | null;
   dividendos: DividendSource[];
   proLabore: number | null; // pró-labore mensal (R$); IRPF progressivo, fora do gatilho
+  aluguel: number | null; // aluguéis mensais (R$); carnê-leão progressivo
   alocacao: Record<string, number>; // classe -> % da carteira (deve somar 100)
   comparar: CompararState;
   importAssets?: ImportAsset[]; // ativos importados do Gorila (revisar/reclassificar)
@@ -46,6 +47,7 @@ export const initialState: WizardState = {
   perfil: null,
   dividendos: [],
   proLabore: null,
+  aluguel: null,
   alocacao: {},
   comparar: {
     valor: null,

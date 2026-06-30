@@ -12,14 +12,19 @@ import {
   irpfProLaboreAnual,
   jcpIrrfAnual,
   runForecast,
-  totalDividendosAnuais,
+  totalDividendosBr,
   totalJcpAnual,
+  totalExteriorAnual,
+  exteriorIrAnual,
+  inssProLaboreAnual,
+  irpfAluguelAnual,
   irpfmEstimado,
 } from "@/lib/forecast";
 import { comparar, PRODUTOS_PADRAO } from "@/lib/asset-compare";
 import { computeGap, PERFIL_LABELS } from "@/lib/profile";
 import { brl, pct } from "@/lib/format";
 import { SunoLockup } from "@/components/suno-lockup";
+import { GapBars } from "@/components/gap-bars";
 
 function fmtAnos(anos: number): string {
   if (anos <= 0) return "imediatamente";
@@ -62,14 +67,21 @@ export default function ResultadoPage() {
 
   // IRPFM (estimativa) — base parcial + créditos do que já foi retido.
   const fc = runForecast(state.dividendos, 1);
-  const creditos =
-    fc.totalIrrf + jcpIrrfAnual(state.dividendos) + irpfProLaboreAnual(state.proLabore ?? 0);
-  const irpfm = irpfmEstimado(
-    totalDividendosAnuais(state.dividendos),
-    totalJcpAnual(state.dividendos),
-    state.proLabore ?? 0,
-    creditos,
-  );
+  const proLaboreAnual = (state.proLabore ?? 0) * 12;
+  const aluguelAnual = (state.aluguel ?? 0) * 12;
+  const irpfmBase =
+    totalDividendosBr(state.dividendos) +
+    totalExteriorAnual(state.dividendos) +
+    totalJcpAnual(state.dividendos) +
+    proLaboreAnual +
+    aluguelAnual;
+  const irpfmCreditos =
+    fc.totalIrrf +
+    exteriorIrAnual(state.dividendos) +
+    jcpIrrfAnual(state.dividendos) +
+    irpfProLaboreAnual(state.proLabore ?? 0) +
+    irpfAluguelAnual(state.aluguel ?? 0);
+  const irpfm = irpfmEstimado(irpfmBase, irpfmCreditos);
 
   // Headline da projeção
   let heroBig: string;
@@ -167,9 +179,13 @@ export default function ResultadoPage() {
                 <span>IRPF anual (tabela progressiva)</span>
                 <span className="num">{brl(irpfProLaboreAnual(state.proLabore))}</span>
               </div>
+              <div className="row row--between" style={{ marginTop: 6 }}>
+                <span>INSS anual (11% até o teto · estimativa)</span>
+                <span className="num">{brl(inssProLaboreAnual(state.proLabore))}</span>
+              </div>
               <p className="subtle" style={{ fontSize: 12, marginTop: 8 }}>
-                Tributação separada do gatilho de dividendos. Entra na base anual do IRPFM
-                (a tratar).
+                Separado do gatilho de dividendos; entra na base do IRPFM. Teto do INSS a validar
+                (valor de 2026).
               </p>
             </div>
           )}
@@ -185,6 +201,35 @@ export default function ResultadoPage() {
               <p className="subtle" style={{ fontSize: 12, marginTop: 8 }}>
                 Tributação definitiva, separada do gatilho de dividendos. Entra na base anual
                 do IRPFM (a tratar).
+              </p>
+            </div>
+          )}
+
+          {/* Dividendo exterior */}
+          {totalExteriorAnual(state.dividendos) > 0 && (
+            <div className="card">
+              <span className="eyebrow">Dividendo exterior</span>
+              <div className="row row--between" style={{ marginTop: 12 }}>
+                <span>IR 15% ao ano (Lei 14.754)</span>
+                <span className="num">{brl(exteriorIrAnual(state.dividendos))}</span>
+              </div>
+              <p className="subtle" style={{ fontSize: 12, marginTop: 8 }}>
+                Sobre dividendos de ativos no exterior/BDR — fora do gatilho de 50k. Estimativa,
+                a validar.
+              </p>
+            </div>
+          )}
+
+          {/* Aluguéis */}
+          {state.aluguel != null && state.aluguel > 0 && (
+            <div className="card">
+              <span className="eyebrow">Aluguéis</span>
+              <div className="row row--between" style={{ marginTop: 12 }}>
+                <span>IRPF anual (carnê-leão)</span>
+                <span className="num">{brl(irpfAluguelAnual(state.aluguel))}</span>
+              </div>
+              <p className="subtle" style={{ fontSize: 12, marginTop: 8 }}>
+                Tabela progressiva; entra na base do IRPFM. Estimativa.
               </p>
             </div>
           )}
@@ -211,9 +256,9 @@ export default function ResultadoPage() {
                 </span>
               </div>
               <p className="subtle" style={{ fontSize: 12, marginTop: 8 }}>
-                Estimativa: a base usa só dividendos + JCP + pró-labore (faltam FII, RF isenta,
-                ganhos e exterior). Acima de R$ 600 mil/ano a alíquota sobe até 10% (R$ 1,2 mi).
-                Regra e base a validar com a área fiscal.
+                Estimativa: a base soma dividendos (BR + exterior) + JCP + pró-labore + aluguéis
+                (faltam FII, RF isenta e ganhos). Acima de R$ 600 mil/ano a alíquota sobe até 10%
+                (R$ 1,2 mi). Regra e base a validar com a área fiscal.
               </p>
             </div>
           )}
@@ -222,20 +267,8 @@ export default function ResultadoPage() {
           {gap && state.perfil && (
             <div className="card">
               <span className="eyebrow">Enquadramento — {PERFIL_LABELS[state.perfil].label}</span>
-              <div className="col" style={{ gap: 8, marginTop: 12 }}>
-                {gap.linhas.map((l) => (
-                  <div key={l.classe} className="row row--between">
-                    <span>{l.classe}</span>
-                    <span className="row" style={{ gap: 10 }}>
-                      <span className="muted tnum">
-                        {pct(l.atualPct)} → {pct(l.alvoPct)}
-                      </span>
-                      <span className={"chip " + (l.acao === "ok" ? "" : "chip--amber")}>
-                        {l.acao === "ok" ? "ok" : l.acao === "aumentar" ? "↑ aumentar" : "↓ reduzir"}
-                      </span>
-                    </span>
-                  </div>
-                ))}
+              <div style={{ marginTop: 12 }}>
+                <GapBars linhas={gap.linhas} />
               </div>
             </div>
           )}

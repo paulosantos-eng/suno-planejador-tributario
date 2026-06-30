@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useWizard } from "@/lib/wizard/context";
 import { CLASSES_ALOCACAO, type ImportAsset, type DividendSource } from "@/lib/wizard/types";
-import { parseGorilaCsv, ehAcaoBr } from "@/lib/portfolio-import/gorila";
+import { parseGorilaCsv, ehAcaoBr, ehDividendoExterior } from "@/lib/portfolio-import/gorila";
 import type { ClasseSuno } from "@/lib/suno-model";
 
 const fmtPct = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
@@ -78,16 +78,27 @@ export function StepAlocacao() {
             valorAnoPassado: Math.round(a.jscp * fator),
             frequencia: "anual" as const,
           }));
+        // Dividendo do exterior (internacional/BDR) → tipo "dividendo_exterior" (15% Lei 14.754).
+        const exteriores: DividendSource[] = r.ativos
+          .filter((a) => ehDividendoExterior(a) && a.dividendos > 0)
+          .map((a) => ({
+            id: crypto.randomUUID(),
+            nome: a.ativo,
+            tipo: "dividendo_exterior" as const,
+            valorAnoPassado: Math.round(a.dividendos * fator),
+            frequencia: "anual" as const,
+          }));
         setState((s) => ({
           ...s,
           importAssets: imported,
           alocacao: pctsFromAssets(imported),
-          dividendos: [...divs, ...jcps],
+          dividendos: [...divs, ...jcps, ...exteriores],
           cliente: { ...s.cliente, patrimonio: Math.round(r.total) },
         }));
         setMsg(
           `Importado: ${r.ativos.length} ativos · patrimônio ${brl(r.total)}.` +
-            (divs.length ? ` ${divs.length} ação(ões) como fonte de dividendo.` : "") +
+            (divs.length ? ` ${divs.length} ação(ões) BR.` : "") +
+            (exteriores.length ? ` ${exteriores.length} exterior.` : "") +
             (jcps.length ? ` ${jcps.length} com JCP.` : "") +
             (r.naoMapeados.length ? ` ⚠ ${r.naoMapeados.length} sem classe — escolha abaixo.` : ""),
         );

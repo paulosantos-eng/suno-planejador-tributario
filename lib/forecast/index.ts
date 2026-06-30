@@ -42,8 +42,11 @@ export function runForecast(sources: DividendSource[], multiplicador = 1): Forec
   let totalIrrf = 0;
   let algumCruza = false;
 
-  // JCP não usa o gatilho de 50k (é 15% na fonte) — fica fora do forecast de dividendos.
-  const elegiveis = sources.filter((s) => s.tipo !== "jcp");
+  // Só dividendo BR + distribuição PJ entram no gatilho de 50k.
+  // (JCP é 15% na fonte; dividendo exterior é Lei 14.754 — ambos fora do gatilho.)
+  const elegiveis = sources.filter(
+    (s) => s.tipo === "dividendo" || s.tipo === "distribuicao_pj",
+  );
 
   const fontes: SourceForecast[] = elegiveis.map((source) => {
     const anual = (source.valorAnoPassado || 0) * multiplicador;
@@ -151,15 +154,37 @@ export function jcpIrrfAnual(sources: DividendSource[]): number {
     .reduce((acc, s) => acc + (s.valorAnoPassado || 0) * ALIQ_JCP, 0);
 }
 
-export function totalDividendosAnuais(sources: DividendSource[]): number {
+export function totalDividendosBr(sources: DividendSource[]): number {
   return sources
-    .filter((s) => s.tipo !== "jcp")
+    .filter((s) => s.tipo === "dividendo" || s.tipo === "distribuicao_pj")
     .reduce((a, s) => a + (s.valorAnoPassado || 0), 0);
 }
 export function totalJcpAnual(sources: DividendSource[]): number {
+  return sources.filter((s) => s.tipo === "jcp").reduce((a, s) => a + (s.valorAnoPassado || 0), 0);
+}
+export function totalExteriorAnual(sources: DividendSource[]): number {
   return sources
-    .filter((s) => s.tipo === "jcp")
+    .filter((s) => s.tipo === "dividendo_exterior")
     .reduce((a, s) => a + (s.valorAnoPassado || 0), 0);
+}
+
+// Dividendo exterior — 15% ao ano (Lei 14.754). Fora do gatilho de 50k.
+export const ALIQ_EXTERIOR = Rules.ALIQ_LEI_14754;
+export function exteriorIrAnual(sources: DividendSource[]): number {
+  return totalExteriorAnual(sources) * ALIQ_EXTERIOR;
+}
+
+// INSS sobre pró-labore: 11% até o teto. Teto é premissa A VALIDAR (muda por ano).
+export const TETO_INSS_MENSAL = 8157.41; // ~2025 — confirmar o valor de 2026
+export function inssProLaboreAnual(proLaboreMensal: number): number {
+  return Math.min(proLaboreMensal || 0, TETO_INSS_MENSAL) * 0.11 * 12;
+}
+
+// Aluguéis — carnê-leão (tabela progressiva). Estimativa simples sobre o valor mensal.
+export function irpfAluguelAnual(aluguelMensal: number): number {
+  if (!aluguelMensal || aluguelMensal <= 0) return 0;
+  const { rate, deduction } = Rules.irpfProgressive(aluguelMensal);
+  return Math.max(0, aluguelMensal * rate - deduction) * 12;
 }
 
 export interface IrpfmResult {
@@ -170,18 +195,11 @@ export interface IrpfmResult {
   devido: number;
 }
 
-// IRPFM (imposto mínimo da Lei 15.270) — ESTIMATIVA.
-// Base parcial (dividendos + JCP + pró-labore): faltam FII, RF isenta, ganhos, exterior.
-// Acima de ~R$600k/ano a alíquota sobe até 10% (R$1,2M). REGRA A VALIDAR com a área fiscal.
-export function irpfmEstimado(
-  dividendosAnuais: number,
-  jcpAnualBruto: number,
-  proLaboreMensal: number,
-  creditos: number,
-): IrpfmResult {
-  const base = dividendosAnuais + jcpAnualBruto + (proLaboreMensal || 0) * 12;
+// IRPFM (imposto mínimo da Lei 15.270) — ESTIMATIVA. base = renda ampla (parcial);
+// créditos = impostos já pagos. Acima de ~R$600k/ano a alíquota sobe até 10% (R$1,2M).
+// REGRA E BASE a validar com a área fiscal.
+export function irpfmEstimado(base: number, creditos: number): IrpfmResult {
   const rate = Rules.irpfmRate(base);
   const gross = base * rate;
-  const devido = Math.max(0, gross - creditos);
-  return { base, rate, gross, creditos, devido };
+  return { base, rate, gross, creditos, devido: Math.max(0, gross - creditos) };
 }
