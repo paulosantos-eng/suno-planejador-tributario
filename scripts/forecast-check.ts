@@ -1,5 +1,5 @@
 // Sanidade da projeção "tempo até o gatilho". Rodar: npx tsx scripts/forecast-check.ts
-import { tempoAteGatilho, irpfProLaboreAnual } from "@/lib/forecast";
+import { tempoAteGatilho, irpfProLaboreAnual, jcpIrrfAnual } from "@/lib/forecast";
 import type { DividendSource, Frequencia } from "@/lib/wizard/types";
 
 function src(nome: string, anual: number, freq: Frequencia): DividendSource {
@@ -32,3 +32,9 @@ console.log("\nPró-labore — IRPF/ano (tabela progressiva):");
 for (const m of [10000, 30000, 50000]) {
   console.log(`  ${brl(m)}/mês → ${brl(irpfProLaboreAnual(m))}/ano`);
 }
+
+console.log("\nJCP — 15% IRRF e fora do gatilho:");
+const comJcp = [src("ITUB", 100_000, "anual")].map((s) => ({ ...s, tipo: "jcp" as const }));
+console.log(`  R$100.000 de JCP → ${brl(jcpIrrfAnual(comJcp))} (esperado R$15.000,00)`);
+const ttJcp = tempoAteGatilho(comJcp, 0.1425);
+console.log(`  JCP no gatilho? fontes=${ttJcp.fontes.length} jaPaga=${ttJcp.jaPaga} (esperado 0 / false)`);

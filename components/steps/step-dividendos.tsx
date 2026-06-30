@@ -2,12 +2,13 @@
 
 import { useWizard } from "@/lib/wizard/context";
 import type { DividendSource, Frequencia, TipoRenda } from "@/lib/wizard/types";
-import { GATILHO_MENSAL, runForecast, irpfProLaboreAnual } from "@/lib/forecast";
+import { GATILHO_MENSAL, runForecast, irpfProLaboreAnual, ALIQ_JCP } from "@/lib/forecast";
 import { brl } from "@/lib/format";
 
 const TIPOS: { id: TipoRenda; label: string }[] = [
   { id: "dividendo", label: "Dividendo de ação" },
   { id: "distribuicao_pj", label: "Distribuição de lucros (PJ)" },
+  { id: "jcp", label: "JCP (juros s/ capital próprio)" },
 ];
 
 const FREQS: { id: Frequencia; label: string }[] = [
@@ -106,26 +107,33 @@ export function StepDividendos() {
                   }
                 />
               </div>
-              <div className="field" style={{ minWidth: 130 }}>
-                <label className="field__label">Frequência</label>
-                <select
-                  className="field__select"
-                  value={d.frequencia}
-                  onChange={(e) => patch(d.id, { frequencia: e.target.value as Frequencia })}
-                >
-                  {FREQS.map((fq) => (
-                    <option key={fq.id} value={fq.id}>
-                      {fq.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {d.tipo !== "jcp" && (
+                <div className="field" style={{ minWidth: 130 }}>
+                  <label className="field__label">Frequência</label>
+                  <select
+                    className="field__select"
+                    value={d.frequencia}
+                    onChange={(e) => patch(d.id, { frequencia: e.target.value as Frequencia })}
+                  >
+                    {FREQS.map((fq) => (
+                      <option key={fq.id} value={fq.id}>
+                        {fq.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <button type="button" className="btn btn--ghost" onClick={() => remove(d.id)}>
                 Remover
               </button>
             </div>
 
-            {d.valorAnoPassado > 0 && f && (
+            {d.valorAnoPassado > 0 && d.tipo === "jcp" && (
+              <p style={{ marginTop: 10, fontSize: 13 }} className="muted">
+                JCP · 15% de IRRF na fonte → ~{brl(d.valorAnoPassado * ALIQ_JCP)}/ano
+              </p>
+            )}
+            {d.valorAnoPassado > 0 && d.tipo !== "jcp" && f && (
               <p style={{ marginTop: 10, fontSize: 13 }} className={cruza ? "" : "muted"}>
                 {cruza ? (
                   <span className="chip chip--coral">

@@ -2,7 +2,7 @@
 //   npx tsx scripts/gorila-check.ts                 -> amostra embutida (fake)
 //   npx tsx scripts/gorila-check.ts "<arquivo.csv>" -> arquivo real
 import { readFileSync } from "node:fs";
-import { parseGorilaCsv, CLASSES_SUNO } from "@/lib/portfolio-import/gorila";
+import { parseGorilaCsv, CLASSES_SUNO, ehAcaoBr } from "@/lib/portfolio-import/gorila";
 
 const SAMPLE = `Patrimônio Bruto (R$);R$1.000,00;;
 ;;;
@@ -42,7 +42,7 @@ if (r.naoMapeados.length) {
 
 const fator = r.periodoDias && r.periodoDias > 0 ? 365 / r.periodoDias : 1;
 console.log(`\nPeríodo: ${r.periodoDias ?? "?"} dias`);
-const acoes = r.ativos.filter((a) => a.classeSuno === "Ações");
+const acoes = r.ativos.filter(ehAcaoBr);
 console.log(`Ações BR (futuras fontes de dividendo): ${acoes.length}`);
 for (const a of acoes) {
   console.log(`  ${a.ativo.slice(0, 22).padEnd(22)} div período ${brl(a.dividendos)} → anual ~${brl(a.dividendos * fator)}`);

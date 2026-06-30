@@ -3,7 +3,7 @@ import { CLASSES_SUNO, type ClasseSuno, type PerfilId } from "@/lib/suno-model";
 export type { PerfilId, ClasseSuno };
 export type Frequencia = "mensal" | "trimestral" | "semestral" | "anual";
 
-export type TipoRenda = "dividendo" | "distribuicao_pj";
+export type TipoRenda = "dividendo" | "distribuicao_pj" | "jcp";
 
 export interface DividendSource {
   id: string;

@@ -42,7 +42,10 @@ export function runForecast(sources: DividendSource[], multiplicador = 1): Forec
   let totalIrrf = 0;
   let algumCruza = false;
 
-  const fontes: SourceForecast[] = sources.map((source) => {
+  // JCP não usa o gatilho de 50k (é 15% na fonte) — fica fora do forecast de dividendos.
+  const elegiveis = sources.filter((s) => s.tipo !== "jcp");
+
+  const fontes: SourceForecast[] = elegiveis.map((source) => {
     const anual = (source.valorAnoPassado || 0) * multiplicador;
     const meses = MESES_POR_FREQ[source.frequencia] ?? MESES_POR_FREQ.anual;
     const pagamentos = meses.length;
@@ -138,4 +141,12 @@ export function tempoAteGatilho(
 export function irpfProLaboreAnual(mensalBruto: number): number {
   if (!mensalBruto || mensalBruto <= 0) return 0;
   return Rules.irpfProLabore(mensalBruto) * 12;
+}
+
+// JCP: 15% de IRRF na fonte (definitivo). Soma das fontes do tipo "jcp".
+export const ALIQ_JCP = Rules.ALIQ_JCP;
+export function jcpIrrfAnual(sources: DividendSource[]): number {
+  return sources
+    .filter((s) => s.tipo === "jcp")
+    .reduce((acc, s) => acc + (s.valorAnoPassado || 0) * ALIQ_JCP, 0);
 }

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useWizard } from "@/lib/wizard/context";
 import { CLASSES_ALOCACAO, type ImportAsset, type DividendSource } from "@/lib/wizard/types";
-import { parseGorilaCsv } from "@/lib/portfolio-import/gorila";
+import { parseGorilaCsv, ehAcaoBr } from "@/lib/portfolio-import/gorila";
 import type { ClasseSuno } from "@/lib/suno-model";
 
 const fmtPct = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
@@ -60,7 +60,7 @@ export function StepAlocacao() {
         // ficam de fora (regime Lei 14.754, não entram no gatilho).
         const fator = r.periodoDias && r.periodoDias > 0 ? 365 / r.periodoDias : 1;
         const divs: DividendSource[] = r.ativos
-          .filter((a) => a.classeSuno === "Ações")
+          .filter(ehAcaoBr)
           .map((a) => ({
             id: crypto.randomUUID(),
             nome: a.ativo,

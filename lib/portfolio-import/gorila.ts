@@ -46,6 +46,12 @@ export function mapToSuno(classe: string, subClasse: string): ClasseSuno | null 
   return null; // desconhecido — vira alerta, não some
 }
 
+// É ação brasileira (dividendo sujeito ao gatilho da Lei 15.270)?
+// BDRs (empresa estrangeira) e exterior ficam de fora.
+export function ehAcaoBr(a: { classe: string; subClasse: string }): boolean {
+  return norm(a.classe) === "renda variavel" && norm(a.subClasse) === "acoes";
+}
+
 // "R$145.114,28" / "-R$479,06" / "R$0,00" → number
 export function parseBRL(raw: string): number {
   if (!raw) return 0;
