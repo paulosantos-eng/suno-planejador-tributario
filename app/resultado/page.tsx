@@ -25,6 +25,8 @@ import { computeGap, PERFIL_LABELS } from "@/lib/profile";
 import { brl, pct } from "@/lib/format";
 import { SunoLockup } from "@/components/suno-lockup";
 import { GapBars } from "@/components/gap-bars";
+import { MemoriaCalculo } from "@/components/memoria-calculo";
+import { impostoTotalHoje } from "@/lib/memoria-calculo";
 
 function fmtAnos(anos: number): string {
   if (anos <= 0) return "imediatamente";
@@ -82,6 +84,7 @@ export default function ResultadoPage() {
     irpfProLaboreAnual(state.proLabore ?? 0) +
     irpfAluguelAnual(state.aluguel ?? 0);
   const irpfm = irpfmEstimado(irpfmBase, irpfmCreditos);
+  const imposto = impostoTotalHoje(state);
 
   // Headline da projeção
   let heroBig: string;
@@ -118,6 +121,18 @@ export default function ResultadoPage() {
 
       <main className="page">
         <div className="col" style={{ gap: 20 }}>
+          {/* Imposto que paga hoje */}
+          <div className="card" style={{ textAlign: "center", padding: 28 }}>
+            <span className="eyebrow">Imposto que você paga hoje (estimativa anual)</span>
+            <div className="num num-2xl" style={{ marginTop: 8 }}>
+              {brl(imposto.total)}
+            </div>
+            <p className="muted" style={{ marginTop: 8, maxWidth: 520, marginInline: "auto" }}>
+              Soma de dividendos, JCP, exterior, pró-labore, INSS, aluguéis e IRPFM — detalhe na
+              memória de cálculo abaixo.
+            </p>
+          </div>
+
           {/* Projeção: quando começa a pagar */}
           <div className="card" style={{ textAlign: "center", padding: 32 }}>
             <span className="eyebrow">Começa a pagar imposto sobre dividendos</span>
@@ -301,6 +316,16 @@ export default function ResultadoPage() {
               </div>
             </div>
           )}
+
+          {/* Memória de cálculo */}
+          <div className="card">
+            <span className="eyebrow">Memória de cálculo</span>
+            <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+              Como cada imposto foi calculado.
+            </p>
+            <div className="divider" />
+            <MemoriaCalculo blocos={imposto.blocos} />
+          </div>
 
           {/* Como se preparar */}
           <div className="card card--dark">
