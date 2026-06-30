@@ -68,16 +68,27 @@ export function StepAlocacao() {
             valorAnoPassado: Math.round(a.dividendos * fator),
             frequencia: "mensal" as const,
           }));
+        // JCP recebido no período (coluna JSCP) → fonte tipo "jcp" (15% IRRF), anualizado.
+        const jcps: DividendSource[] = r.ativos
+          .filter((a) => a.jscp > 0)
+          .map((a) => ({
+            id: crypto.randomUUID(),
+            nome: `${a.ativo} (JCP)`,
+            tipo: "jcp" as const,
+            valorAnoPassado: Math.round(a.jscp * fator),
+            frequencia: "anual" as const,
+          }));
         setState((s) => ({
           ...s,
           importAssets: imported,
           alocacao: pctsFromAssets(imported),
-          dividendos: divs,
+          dividendos: [...divs, ...jcps],
           cliente: { ...s.cliente, patrimonio: Math.round(r.total) },
         }));
         setMsg(
           `Importado: ${r.ativos.length} ativos · patrimônio ${brl(r.total)}.` +
-            (divs.length ? ` ${divs.length} ação(ões) listada(s) como fonte de dividendo (ajuste os valores na Renda).` : "") +
+            (divs.length ? ` ${divs.length} ação(ões) como fonte de dividendo.` : "") +
+            (jcps.length ? ` ${jcps.length} com JCP.` : "") +
             (r.naoMapeados.length ? ` ⚠ ${r.naoMapeados.length} sem classe — escolha abaixo.` : ""),
         );
       } catch (err) {

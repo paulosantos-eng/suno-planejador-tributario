@@ -150,3 +150,38 @@ export function jcpIrrfAnual(sources: DividendSource[]): number {
     .filter((s) => s.tipo === "jcp")
     .reduce((acc, s) => acc + (s.valorAnoPassado || 0) * ALIQ_JCP, 0);
 }
+
+export function totalDividendosAnuais(sources: DividendSource[]): number {
+  return sources
+    .filter((s) => s.tipo !== "jcp")
+    .reduce((a, s) => a + (s.valorAnoPassado || 0), 0);
+}
+export function totalJcpAnual(sources: DividendSource[]): number {
+  return sources
+    .filter((s) => s.tipo === "jcp")
+    .reduce((a, s) => a + (s.valorAnoPassado || 0), 0);
+}
+
+export interface IrpfmResult {
+  base: number;
+  rate: number;
+  gross: number;
+  creditos: number;
+  devido: number;
+}
+
+// IRPFM (imposto mínimo da Lei 15.270) — ESTIMATIVA.
+// Base parcial (dividendos + JCP + pró-labore): faltam FII, RF isenta, ganhos, exterior.
+// Acima de ~R$600k/ano a alíquota sobe até 10% (R$1,2M). REGRA A VALIDAR com a área fiscal.
+export function irpfmEstimado(
+  dividendosAnuais: number,
+  jcpAnualBruto: number,
+  proLaboreMensal: number,
+  creditos: number,
+): IrpfmResult {
+  const base = dividendosAnuais + jcpAnualBruto + (proLaboreMensal || 0) * 12;
+  const rate = Rules.irpfmRate(base);
+  const gross = base * rate;
+  const devido = Math.max(0, gross - creditos);
+  return { base, rate, gross, creditos, devido };
+}

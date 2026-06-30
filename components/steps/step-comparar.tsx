@@ -7,16 +7,18 @@ import { brl, pct } from "@/lib/format";
 export function StepComparar() {
   const { state, setState } = useWizard();
   const c = state.comparar;
-  const produtos = c.produtos ?? PRODUTOS_PADRAO;
+  const produtos =
+    c.produtos?.length && c.produtos.every((p) => p.indexador)
+      ? c.produtos
+      : PRODUTOS_PADRAO.map((x) => ({ ...x }));
+  const ipcaAA = c.ipcaAA ?? 0.045;
 
   const set = (p: Partial<typeof c>) =>
     setState((s) => ({ ...s, comparar: { ...s.comparar, ...p } }));
-  const setPct = (i: number, pctCDI: number) => {
-    set({ produtos: produtos.map((p, idx) => (idx === i ? { ...p, pctCDI } : p)) });
-  };
+  const setTaxa = (i: number, taxa: number) =>
+    set({ produtos: produtos.map((p, idx) => (idx === i ? { ...p, taxa } : p)) });
 
-  const r =
-    c.valor && c.valor > 0 ? comparar(c.valor, c.prazoMeses, c.cdiAA, produtos) : null;
+  const r = c.valor && c.valor > 0 ? comparar(c.valor, c.prazoMeses, c.cdiAA, ipcaAA, produtos) : null;
 
   return (
     <div className="col" style={{ gap: 14 }}>
@@ -49,7 +51,7 @@ export function StepComparar() {
           />
         </div>
         <div className="field grow">
-          <label className="field__label">CDI ao ano (%)</label>
+          <label className="field__label">CDI a.a. (%)</label>
           <input
             className="field__input"
             type="number"
@@ -58,25 +60,36 @@ export function StepComparar() {
             onChange={(e) => set({ cdiAA: (Number(e.target.value) || 0) / 100 })}
           />
         </div>
+        <div className="field grow">
+          <label className="field__label">IPCA a.a. (%)</label>
+          <input
+            className="field__input"
+            type="number"
+            step="0.1"
+            value={(ipcaAA * 100).toFixed(1)}
+            onChange={(e) => set({ ipcaAA: (Number(e.target.value) || 0) / 100 })}
+          />
+        </div>
       </div>
-      <span className="field__hint">CDI é premissa de mercado — ajuste conforme o cenário.</span>
+      <span className="field__hint">CDI e IPCA são premissas de mercado — ajuste conforme o cenário.</span>
 
       <div className="divider" />
-      <span className="eyebrow">Produtos — % do CDI (editável)</span>
+      <span className="eyebrow">Produtos (taxa editável)</span>
       {produtos.map((p, i) => {
         const linha = r?.linhas.find((l) => l.nome === p.nome);
+        const ipca = p.indexador === "ipca";
         return (
           <div key={p.nome} className="row" style={{ gap: 12, alignItems: "flex-end" }}>
             <div className="field grow">
               <label className="field__label">
-                {p.nome} · {p.isento ? "isento" : "tributado"}
+                {p.nome} · {p.isento ? "isento" : "tributado"} · {ipca ? "IPCA + (%)" : "% do CDI"}
               </label>
               <input
                 className="field__input"
                 type="number"
-                step="1"
-                value={(p.pctCDI * 100).toFixed(0)}
-                onChange={(e) => setPct(i, (Number(e.target.value) || 0) / 100)}
+                step={ipca ? "0.1" : "1"}
+                value={(p.taxa * 100).toFixed(ipca ? 1 : 0)}
+                onChange={(e) => setTaxa(i, (Number(e.target.value) || 0) / 100)}
               />
             </div>
             {linha && (

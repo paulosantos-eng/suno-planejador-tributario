@@ -11,6 +11,7 @@ export interface GorilaAsset {
   classe: string;
   posicao: number;
   dividendos: number; // dividendos no período do relatório (R$)
+  jscp: number; // JCP no período do relatório (R$)
   classeSuno: ClasseSuno | null;
 }
 
@@ -126,6 +127,7 @@ export function parseGorilaCsv(text: string): GorilaImport {
   const idxSub = header.findIndex((h) => h.includes("sub") && h.includes("classe"));
   const idxPos = header.findIndex((h) => h.includes("posicao") && h.includes("r$"));
   const idxDiv = header.findIndex((h) => h.includes("dividend"));
+  const idxJscp = header.findIndex((h) => h.includes("jscp") || h.includes("jcp"));
   if (idxAtivo === -1 || idxClasse === -1 || idxPos === -1) {
     throw new Error(
       "não encontrei as colunas Ativo/Classe/Posição (R$) — o layout do relatório pode ser diferente.",
@@ -141,12 +143,14 @@ export function parseGorilaCsv(text: string): GorilaImport {
     const subClasse = (cols[idxSub] ?? "").trim();
     const posicao = parseBRL(cols[idxPos] ?? "");
     const dividendos = idxDiv >= 0 ? parseBRL(cols[idxDiv] ?? "") : 0;
+    const jscp = idxJscp >= 0 ? parseBRL(cols[idxJscp] ?? "") : 0;
     ativos.push({
       ativo,
       subClasse,
       classe,
       posicao,
       dividendos,
+      jscp,
       classeSuno: mapToSuno(classe, subClasse),
     });
   }

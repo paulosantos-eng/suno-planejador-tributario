@@ -21,7 +21,8 @@ export interface CompararState {
   valor: number | null;
   prazoMeses: number;
   cdiAA: number; // CDI ao ano (decimal) — premissa de mercado, editável
-  produtos: CompareProduct[]; // cardápio comparado (cada um com % do CDI editável)
+  ipcaAA: number; // IPCA ao ano (decimal) — premissa de mercado, editável
+  produtos: CompareProduct[]; // cardápio comparado (cada um com taxa editável)
 }
 
 export interface ImportAsset {
@@ -50,6 +51,7 @@ export const initialState: WizardState = {
     valor: null,
     prazoMeses: 24,
     cdiAA: 0.1425,
+    ipcaAA: 0.045,
     produtos: PRODUTOS_PADRAO.map((p) => ({ ...p })),
   },
 };

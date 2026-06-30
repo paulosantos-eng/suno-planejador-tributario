@@ -5,7 +5,17 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWizard } from "@/lib/wizard/context";
 import { firstIncompleteStep } from "@/lib/wizard/types";
-import { tempoAteGatilho, CDI_PADRAO, GATILHO_MENSAL, irpfProLaboreAnual, jcpIrrfAnual } from "@/lib/forecast";
+import {
+  tempoAteGatilho,
+  CDI_PADRAO,
+  GATILHO_MENSAL,
+  irpfProLaboreAnual,
+  jcpIrrfAnual,
+  runForecast,
+  totalDividendosAnuais,
+  totalJcpAnual,
+  irpfmEstimado,
+} from "@/lib/forecast";
 import { comparar, PRODUTOS_PADRAO } from "@/lib/asset-compare";
 import { computeGap, PERFIL_LABELS } from "@/lib/profile";
 import { brl, pct } from "@/lib/format";
@@ -35,15 +45,31 @@ export default function ResultadoPage() {
 
   const tt = tempoAteGatilho(state.dividendos, crescimento);
   const gap = state.perfil ? computeGap(state.perfil, state.alocacao) : null;
+  const cmpProdutos =
+    state.comparar.produtos?.length && state.comparar.produtos.every((p) => p.indexador)
+      ? state.comparar.produtos
+      : PRODUTOS_PADRAO;
   const cmp =
     state.comparar.valor && state.comparar.valor > 0
       ? comparar(
           state.comparar.valor,
           state.comparar.prazoMeses,
           state.comparar.cdiAA,
-          state.comparar.produtos ?? PRODUTOS_PADRAO,
+          state.comparar.ipcaAA ?? 0.045,
+          cmpProdutos,
         )
       : null;
+
+  // IRPFM (estimativa) — base parcial + créditos do que já foi retido.
+  const fc = runForecast(state.dividendos, 1);
+  const creditos =
+    fc.totalIrrf + jcpIrrfAnual(state.dividendos) + irpfProLaboreAnual(state.proLabore ?? 0);
+  const irpfm = irpfmEstimado(
+    totalDividendosAnuais(state.dividendos),
+    totalJcpAnual(state.dividendos),
+    state.proLabore ?? 0,
+    creditos,
+  );
 
   // Headline da projeção
   let heroBig: string;
@@ -159,6 +185,35 @@ export default function ResultadoPage() {
               <p className="subtle" style={{ fontSize: 12, marginTop: 8 }}>
                 Tributação definitiva, separada do gatilho de dividendos. Entra na base anual
                 do IRPFM (a tratar).
+              </p>
+            </div>
+          )}
+
+          {/* IRPFM (estimativa) */}
+          {irpfm.base > 0 && (
+            <div className="card">
+              <span className="eyebrow">IRPFM — imposto mínimo anual (estimativa)</span>
+              <div className="row row--between" style={{ marginTop: 12 }}>
+                <span>Base ampla (parcial)</span>
+                <span className="num">{brl(irpfm.base)}</span>
+              </div>
+              <div className="row row--between" style={{ marginTop: 6 }}>
+                <span>Alíquota mínima</span>
+                <span className="num">{pct(irpfm.rate)}</span>
+              </div>
+              <div className="row row--between" style={{ marginTop: 6 }}>
+                <span className="strong">IRPFM devido (após créditos)</span>
+                <span
+                  className="num"
+                  style={{ color: irpfm.devido > 0 ? "var(--coral-600)" : "var(--ink-900)" }}
+                >
+                  {brl(irpfm.devido)}
+                </span>
+              </div>
+              <p className="subtle" style={{ fontSize: 12, marginTop: 8 }}>
+                Estimativa: a base usa só dividendos + JCP + pró-labore (faltam FII, RF isenta,
+                ganhos e exterior). Acima de R$ 600 mil/ano a alíquota sobe até 10% (R$ 1,2 mi).
+                Regra e base a validar com a área fiscal.
               </p>
             </div>
           )}
