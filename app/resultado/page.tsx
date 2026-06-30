@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useWizard } from "@/lib/wizard/context";
 import { firstIncompleteStep } from "@/lib/wizard/types";
 import { tempoAteGatilho, CDI_PADRAO, GATILHO_MENSAL, irpfProLaboreAnual, jcpIrrfAnual } from "@/lib/forecast";
-import { comparar } from "@/lib/asset-compare";
+import { comparar, PRODUTOS_PADRAO } from "@/lib/asset-compare";
 import { computeGap, PERFIL_LABELS } from "@/lib/profile";
 import { brl, pct } from "@/lib/format";
 import { SunoLockup } from "@/components/suno-lockup";
@@ -37,13 +37,12 @@ export default function ResultadoPage() {
   const gap = state.perfil ? computeGap(state.perfil, state.alocacao) : null;
   const cmp =
     state.comparar.valor && state.comparar.valor > 0
-      ? comparar({
-          valor: state.comparar.valor,
-          prazoMeses: state.comparar.prazoMeses,
-          cdiAA: state.comparar.cdiAA,
-          cdbPctCDI: state.comparar.cdbPctCDI,
-          lcaPctCDI: state.comparar.lcaPctCDI,
-        })
+      ? comparar(
+          state.comparar.valor,
+          state.comparar.prazoMeses,
+          state.comparar.cdiAA,
+          state.comparar.produtos ?? PRODUTOS_PADRAO,
+        )
       : null;
 
   // Headline da projeção
@@ -192,20 +191,24 @@ export default function ResultadoPage() {
               <span className="eyebrow">
                 Onde alocar {brl(state.comparar.valor || 0)} por {state.comparar.prazoMeses} meses
               </span>
-              <div className="row row--between" style={{ marginTop: 12 }}>
-                <span>CDB líquido (IR {pct(cmp.cdb.aliquotaIR)})</span>
-                <span className="num">{brl(cmp.cdb.liquido)}</span>
-              </div>
-              <div className="row row--between" style={{ marginTop: 6 }}>
-                <span>LCA/LCI líquido (isento)</span>
-                <span className="num">{brl(cmp.lca.liquido)}</span>
+              <div className="col" style={{ gap: 6, marginTop: 12 }}>
+                {cmp.linhas.map((l) => (
+                  <div key={l.nome} className="row row--between">
+                    <span>
+                      {l.nome}{" "}
+                      <span className="subtle">
+                        {l.isento ? "· isento" : `· IR ${pct(l.aliquotaIR)}`}
+                      </span>
+                    </span>
+                    <span className="num tnum">{brl(l.liquido)}</span>
+                  </div>
+                ))}
               </div>
               <div className="divider" />
               <div className="banner banner--info">
                 <span>
-                  {cmp.vencedor === "empate"
-                    ? "CDB e LCA/LCI empatam no líquido."
-                    : `${cmp.vencedor === "lca" ? "LCA/LCI" : "CDB"} rende ${brl(cmp.diferenca)} a mais no líquido.`}
+                  Melhor líquido: <strong>{cmp.vencedor.nome}</strong>
+                  {cmp.diferenca > 0 ? ` — ${brl(cmp.diferenca)} acima do 2º.` : "."}
                 </span>
               </div>
             </div>
@@ -229,8 +232,11 @@ export default function ResultadoPage() {
                   planejar a distribuição.
                 </li>
               )}
-              {cmp && cmp.vencedor === "lca" && (
-                <li>Para o novo aporte, LCA/LCI rende mais líquido que o CDB neste prazo.</li>
+              {cmp && cmp.vencedor.isento && (
+                <li>
+                  Para o novo aporte, um isento ({cmp.vencedor.nome}) rende mais líquido neste
+                  prazo.
+                </li>
               )}
               {gap && gap.linhas.some((l) => l.acao !== "ok") && (
                 <li>

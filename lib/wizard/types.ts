@@ -1,4 +1,5 @@
 import { CLASSES_SUNO, type ClasseSuno, type PerfilId } from "@/lib/suno-model";
+import { type CompareProduct, PRODUTOS_PADRAO } from "@/lib/asset-compare";
 
 export type { PerfilId, ClasseSuno };
 export type Frequencia = "mensal" | "trimestral" | "semestral" | "anual";
@@ -20,8 +21,7 @@ export interface CompararState {
   valor: number | null;
   prazoMeses: number;
   cdiAA: number; // CDI ao ano (decimal) — premissa de mercado, editável
-  cdbPctCDI: number; // ex.: 1.10 = 110% do CDI
-  lcaPctCDI: number; // ex.: 0.90 = 90% do CDI
+  produtos: CompareProduct[]; // cardápio comparado (cada um com % do CDI editável)
 }
 
 export interface ImportAsset {
@@ -46,7 +46,12 @@ export const initialState: WizardState = {
   dividendos: [],
   proLabore: null,
   alocacao: {},
-  comparar: { valor: null, prazoMeses: 24, cdiAA: 0.1425, cdbPctCDI: 1.0, lcaPctCDI: 0.9 },
+  comparar: {
+    valor: null,
+    prazoMeses: 24,
+    cdiAA: 0.1425,
+    produtos: PRODUTOS_PADRAO.map((p) => ({ ...p })),
+  },
 };
 
 export function isStepValid(step: number, s: WizardState): boolean {

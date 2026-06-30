@@ -1,16 +1,21 @@
 import { Rules } from "@/lib/tax-engine/rules";
 
-export interface CompareInput {
-  valor: number;
-  prazoMeses: number;
-  cdiAA: number; // decimal ao ano
-  cdbPctCDI: number; // ex.: 1.10
-  lcaPctCDI: number; // ex.: 0.90
+export interface CompareProduct {
+  nome: string;
+  isento: boolean; // isento de IR para PF?
+  pctCDI: number; // % do CDI (1.0 = 100%)
 }
 
-export interface CompareLine {
-  nome: string;
-  isento: boolean;
+// Cardápio padrão: tributados (CDB, Tesouro Selic) × isentos (LCI/LCA, CRI/CRA).
+// Debênture incentivada (IPCA+) e FII (rendimento mensal) são modelos diferentes — fica para depois.
+export const PRODUTOS_PADRAO: CompareProduct[] = [
+  { nome: "CDB", isento: false, pctCDI: 1.0 },
+  { nome: "Tesouro Selic", isento: false, pctCDI: 1.0 },
+  { nome: "LCI/LCA", isento: true, pctCDI: 0.9 },
+  { nome: "CRI/CRA", isento: true, pctCDI: 0.95 },
+];
+
+export interface CompareLine extends CompareProduct {
   taxaAA: number;
   bruto: number; // rendimento bruto no prazo
   aliquotaIR: number;
@@ -22,51 +27,33 @@ export interface CompareLine {
 export interface CompareResult {
   dias: number;
   anos: number;
-  cdb: CompareLine;
-  lca: CompareLine;
-  vencedor: "cdb" | "lca" | "empate";
-  diferenca: number; // diferença absoluta no líquido
+  linhas: CompareLine[]; // ordenadas por líquido (desc)
+  vencedor: CompareLine;
+  diferenca: number; // líquido do vencedor menos o do 2º
 }
 
-export function comparar(input: CompareInput): CompareResult {
-  const dias = Math.round(input.prazoMeses * 30.4);
-  const anos = input.prazoMeses / 12;
+export function comparar(
+  valor: number,
+  prazoMeses: number,
+  cdiAA: number,
+  produtos: CompareProduct[],
+): CompareResult {
+  const dias = Math.round(prazoMeses * 30.4);
+  const anos = prazoMeses / 12;
+  const aliqRf = Rules.rfRegressive(dias); // tabela regressiva por prazo (tributados)
 
-  // CDB — tributado pela tabela regressiva da RF (alíquota por prazo).
-  const cdbTaxa = input.cdiAA * input.cdbPctCDI;
-  const cdbBruto = input.valor * (Math.pow(1 + cdbTaxa, anos) - 1);
-  const aliq = Rules.rfRegressive(dias);
-  const cdbIr = cdbBruto * aliq;
-  const cdbLiq = cdbBruto - cdbIr;
+  const linhas: CompareLine[] = produtos.map((p) => {
+    const taxaAA = cdiAA * p.pctCDI;
+    const bruto = valor * (Math.pow(1 + taxaAA, anos) - 1);
+    const aliquotaIR = p.isento ? 0 : aliqRf;
+    const ir = bruto * aliquotaIR;
+    const liquido = bruto - ir;
+    return { ...p, taxaAA, bruto, aliquotaIR, ir, liquido, total: valor + liquido };
+  });
 
-  // LCA/LCI — isento de IR para PF.
-  const lcaTaxa = input.cdiAA * input.lcaPctCDI;
-  const lcaBruto = input.valor * (Math.pow(1 + lcaTaxa, anos) - 1);
+  linhas.sort((a, b) => b.liquido - a.liquido);
+  const vencedor = linhas[0];
+  const diferenca = linhas.length > 1 ? vencedor.liquido - linhas[1].liquido : 0;
 
-  const cdb: CompareLine = {
-    nome: "CDB",
-    isento: false,
-    taxaAA: cdbTaxa,
-    bruto: cdbBruto,
-    aliquotaIR: aliq,
-    ir: cdbIr,
-    liquido: cdbLiq,
-    total: input.valor + cdbLiq,
-  };
-  const lca: CompareLine = {
-    nome: "LCA/LCI",
-    isento: true,
-    taxaAA: lcaTaxa,
-    bruto: lcaBruto,
-    aliquotaIR: 0,
-    ir: 0,
-    liquido: lcaBruto,
-    total: input.valor + lcaBruto,
-  };
-
-  const diff = lca.liquido - cdb.liquido;
-  const vencedor =
-    Math.abs(diff) < 0.005 * input.valor ? "empate" : diff > 0 ? "lca" : "cdb";
-
-  return { dias, anos, cdb, lca, vencedor, diferenca: Math.abs(diff) };
+  return { dias, anos, linhas, vencedor, diferenca };
 }
